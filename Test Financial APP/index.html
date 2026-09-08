@@ -1278,7 +1278,7 @@
     let cacheData = {};
     let localConfigState = [];
     let ratingFeedbackSeleccionado = 'Muy Satisfecho';
-    let estaOculto = false;
+    let estaOculto = true;
     
     let modalContexto = { tipo: '', callback: null, extraData: null };
 
@@ -2267,6 +2267,7 @@
     }
 
     function inicializarSistema() {
+      document.body.classList.add('modo-privacidad-activo');
       const today = new Date().toISOString().split('T')[0];
       document.querySelectorAll('input[type="date"]').forEach(inp => inp.value = today);
       
