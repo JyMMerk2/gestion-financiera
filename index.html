@@ -1287,6 +1287,38 @@
     let tasaCaribe_USD = 57.75;
     let tasaOficialEUR = 68.48;
 
+    // FUNCIONES HELPER SEGUROS
+    function parseMontoSeguro(val) {
+      if (val === null || val === undefined) return 0;
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      let str = String(val).replace(/[^0-9.-]/g, '');
+      let num = parseFloat(str);
+      return isNaN(num) ? 0 : num;
+    }
+
+    function formatearFechaLimpia(fechaRaw) {
+      if (!fechaRaw) return '';
+      let str = String(fechaRaw).trim();
+      return str.split('T')[0];
+    }
+
+    function evaluarRangoFecha(fechaStr) {
+      if (!fechaStr) return false;
+      const mesFiltroInput = document.getElementById('filtroMesPeriodo');
+      if (!mesFiltroInput || !mesFiltroInput.value) return true;
+
+      const mesSeleccionado = mesFiltroInput.value;
+      const fechaLimpia = formatearFechaLimpia(fechaStr);
+      return fechaLimpia.startsWith(mesSeleccionado);
+    }
+
+    function obtenerFilaIndexSeguro(row) {
+      if (!Array.isArray(row) || row.length === 0) return 0;
+      let lastVal = row[row.length - 1];
+      let idx = parseInt(lastVal, 10);
+      return isNaN(idx) ? 0 : idx;
+    }
+
     // SISTEMA OFFLINE Y COLA DE SINCRONIZACIÓN
     function obtenerColaAcciones() {
       return JSON.parse(localStorage.getItem('cola_acciones_offline') || '[]');
@@ -1374,7 +1406,7 @@
         const temporalIndex = datos.filaIndex || (Date.now() * -1);
         
         if (datos.filaIndex) {
-          const idx = cacheData.presupuesto.findIndex(r => r[r.length - 1] === Number(datos.filaIndex));
+          const idx = cacheData.presupuesto.findIndex(r => obtenerFilaIndexSeguro(r) === Number(datos.filaIndex));
           if (idx !== -1) {
             cacheData.presupuesto[idx] = [datos.fecha, datos.tipo, datos.categoria, datos.concepto, datos.monto, datos.wallet, datos.moneda, datos.montoOriginal, datos.tasaCambio, Number(datos.filaIndex)];
           }
@@ -1385,7 +1417,7 @@
         if (!cacheData.ahorros) cacheData.ahorros = [];
         const temporalIndex = datos.filaIndex || (Date.now() * -1);
         if (datos.filaIndex) {
-          const idx = cacheData.ahorros.findIndex(r => r[r.length - 1] === Number(datos.filaIndex));
+          const idx = cacheData.ahorros.findIndex(r => obtenerFilaIndexSeguro(r) === Number(datos.filaIndex));
           if (idx !== -1) {
             cacheData.ahorros[idx] = [datos.fecha, datos.meta, datos.concepto, datos.monto, datos.tipo, datos.wallet, datos.moneda, datos.montoOriginal, datos.walletDestino, Number(datos.filaIndex)];
           }
@@ -1396,7 +1428,7 @@
         if (!cacheData.prestamos) cacheData.prestamos = [];
         const temporalIndex = datos.filaIndex || (Date.now() * -1);
         if (datos.filaIndex) {
-          const idx = cacheData.prestamos.findIndex(r => r[r.length - 1] === Number(datos.filaIndex));
+          const idx = cacheData.prestamos.findIndex(r => obtenerFilaIndexSeguro(r) === Number(datos.filaIndex));
           if (idx !== -1) {
             cacheData.prestamos[idx] = [datos.fecha, datos.entidad, datos.tipo, datos.monto, datos.notas, datos.wallet, Number(datos.filaIndex)];
           }
@@ -1414,7 +1446,7 @@
         };
         const key = hojaMap[datos.nombreHoja];
         if (key && cacheData[key]) {
-          cacheData[key] = cacheData[key].filter(r => r[r.length - 1] !== Number(datos.filaIndex));
+          cacheData[key] = cacheData[key].filter(r => obtenerFilaIndexSeguro(r) !== Number(datos.filaIndex));
         }
       }
 
@@ -1428,8 +1460,8 @@
     }
 
     function calcularBalancePréstamo() {
-      const montoTotal = parseFloat(document.getElementById('prestMonto').value) || 0;
-      const pagadoAcum = parseFloat(document.getElementById('prestPagadoAcum').value) || 0;
+      const montoTotal = parseMontoSeguro(document.getElementById('prestMonto').value);
+      const pagadoAcum = parseMontoSeguro(document.getElementById('prestPagadoAcum').value);
       const faltaPagar = Math.max(0, montoTotal - pagadoAcum);
       document.getElementById('prestFaltaPagar').value = faltaPagar.toFixed(2);
     }
@@ -1549,7 +1581,7 @@
         presupuestoData.forEach(row => {
           let fechaStr = formatearFechaLimpia(row[0]);
           let mesKey = fechaStr.substring(0, 7);
-          let mRD = parseFloat(row[4]) || 0;
+          let mRD = parseMontoSeguro(row[4]);
           let tipo = row[1];
 
           if (calculos[mesKey]) {
@@ -1595,7 +1627,7 @@
 
       let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
       transaccionesMes.slice(-5).reverse().forEach(row => {
-        let mRD = parseFloat(row[4]) || 0;
+        let mRD = parseMontoSeguro(row[4]);
         let esIngreso = row[1] === 'Ingreso';
         html += `
           <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border-color);">
@@ -1827,8 +1859,8 @@
       }
       
       if (modalContexto.tipo === 'REGISTRAR_ACCIONES_COOP') {
-        const montoNum = parseFloat(inputVal);
-        if (isNaN(montoNum) || montoNum <= 0) {
+        const montoNum = parseMontoSeguro(inputVal);
+        if (montoNum <= 0) {
           showToast('⚠️ Ingresa un monto válido para las acciones.');
           return;
         }
@@ -1847,8 +1879,8 @@
       }
 
       if (modalContexto.tipo === 'TRANSFERIR_WALLET') {
-        const montoNum = parseFloat(inputVal);
-        if (isNaN(montoNum) || montoNum <= 0) {
+        const montoNum = parseMontoSeguro(inputVal);
+        if (montoNum <= 0) {
           showToast('⚠️ Ingresa un monto válido para transferir.');
           return;
         }
@@ -1957,7 +1989,7 @@
     function guardarPatrimonio(e) {
       e.preventDefault();
       const nombre = document.getElementById('patNombre').value.trim();
-      const valor = document.getElementById('patValor').value;
+      const valor = parseMontoSeguro(document.getElementById('patValor').value);
       const foto = document.getElementById('patFoto').value.trim();
       const fecha = document.getElementById('patFecha').value;
 
@@ -1987,26 +2019,20 @@
       showToast(`🎯 Tasa seleccionada: ${monedaCode} @ ${tasaValor.toFixed(2)}`);
     }
 
-    function formatearFechaLimpia(fechaRaw) {
-      if (!fechaRaw) return '';
-      let str = String(fechaRaw);
-      return str.split('T')[0];
-    }
-
     function extraerDatosMoneda(rowMoneda, rowMontoOriginal, rowMontoDOP, conceptoTexto) {
       let monedaCode = String(rowMoneda || '').trim().toUpperCase();
-      let valOrig = parseFloat(rowMontoOriginal);
-      let mDOP = parseFloat(rowMontoDOP) || 0;
+      let valOrig = parseMontoSeguro(rowMontoOriginal);
+      let mDOP = parseMontoSeguro(rowMontoDOP);
 
       if (conceptoTexto && typeof conceptoTexto === 'string') {
         if (conceptoTexto.includes('[USD $')) {
           monedaCode = 'USD';
           let match = conceptoTexto.match(/\[USD\s*\$([\d\.]+)/);
-          if (match && match[1]) valOrig = parseFloat(match[1]);
+          if (match && match[1]) valOrig = parseMontoSeguro(match[1]);
         } else if (conceptoTexto.includes('[EUR €')) {
           monedaCode = 'EUR';
           let match = conceptoTexto.match(/\[EUR\s*€([\d\.]+)/);
-          if (match && match[1]) valOrig = parseFloat(match[1]);
+          if (match && match[1]) valOrig = parseMontoSeguro(match[1]);
         }
       }
 
@@ -2018,7 +2044,7 @@
         }
       }
 
-      if (isNaN(valOrig) || valOrig === 0) {
+      if (valOrig === 0) {
         valOrig = mDOP;
       }
 
@@ -2349,15 +2375,6 @@
       setTimeout(() => { toast.style.display = 'none'; }, 3000);
     }
 
-    function evaluarRangoFecha(fechaStr) {
-      const mesFiltroInput = document.getElementById('filtroMesPeriodo');
-      if (!mesFiltroInput || !mesFiltroInput.value) return true;
-
-      const mesSeleccionado = mesFiltroInput.value;
-      const fechaLimpia = formatearFechaLimpia(fechaStr);
-      return fechaLimpia.startsWith(mesSeleccionado);
-    }
-
     function cargarDatosApp(isBackgroundSync = false) {
       if (isBackgroundSync) actualizarEstadoRedUI();
 
@@ -2450,7 +2467,7 @@
 
       if (data.presupuesto && data.presupuesto.length > 0) {
         data.presupuesto.forEach(row => {
-          let mRD = parseFloat(row[4]) || 0;
+          let mRD = parseMontoSeguro(row[4]);
           let rawWallet = row[5] || activeWallets[0];
           let keyNorm = normalizarTexto(rawWallet);
           let walletReal = walletMapNorm[keyNorm] || rawWallet;
@@ -2493,7 +2510,7 @@
               else sumGastosMes += mRD;
             }
 
-            let filaIndex = row[row.length - 1];
+            let filaIndex = obtenerFilaIndexSeguro(row);
 
             if (tbP) {
               tbP.innerHTML += `<tr><td>${fechaRow}</td><td><b>${walletReal}</b></td><td>${row[1]} / ${row[2]}</td><td>${htmlMontoOriginal}</td><td style="color:${row[1]==='Ingreso'?'#10b981':'#ef4444'}; font-weight:bold;">RD$ ${mRD.toFixed(2)}</td>
@@ -2513,7 +2530,7 @@
 
       if (data.ahorros && data.ahorros.length > 0) {
         data.ahorros.forEach(row => {
-          let mRD = parseFloat(row[3]) || 0;
+          let mRD = parseMontoSeguro(row[3]);
           let rawMeta = row[1];
           let rawWalletOrig = row[5] || activeWallets[0];
           let rawWalletDest = row[8] || rawWalletOrig;
@@ -2542,7 +2559,7 @@
             let htmlMontoOriginal = construirHTMLMontoOriginal(row[6], row[7], mRD, conceptoTexto);
             sumAhorrosMes += montoNeto;
 
-            let filaIndex = row[row.length - 1];
+            let filaIndex = obtenerFilaIndexSeguro(row);
 
             if (tbA) {
               tbA.innerHTML += `<tr><td>${fechaRow}</td><td><b>${walletOrigReal}</b></td><td>${metaReal}</td><td>${row[4]}</td><td>${htmlMontoOriginal}</td><td style="color:#4f46e5; font-weight:bold;">RD$ ${mRD.toFixed(2)}</td>
@@ -2562,9 +2579,9 @@
         tbPat.innerHTML = '';
         if (data.construccion && data.construccion.length > 0) {
           data.construccion.filter(row => String(row[1]).includes('Patrimonio Activo')).forEach(row => {
-            let m = parseFloat(row[3]) || 0;
+            let m = parseMontoSeguro(row[3]);
             totalBienesPatrimoniales += m;
-            let filaIndex = row[row.length - 1];
+            let filaIndex = obtenerFilaIndexSeguro(row);
             tbPat.innerHTML += `<tr><td>${formatearFechaLimpia(row[0])}</td><td><b>${row[2]}</b></td><td>RD$ ${m.toFixed(2)}</td>
               <td>
                 <button class="btn-action btn-delete" onclick="borrarFila('Construccion_Solar', ${filaIndex})">🗑️</button>
@@ -2582,7 +2599,7 @@
       if (data.prestamos && data.prestamos.length > 0) {
         data.prestamos.forEach(row => {
           let entidadKey = normalizarTexto(row[1]);
-          let m = parseFloat(row[3]) || 0;
+          let m = parseMontoSeguro(row[3]);
           let fechaRow = formatearFechaLimpia(row[0]);
           let walletReal = walletMapNorm[normalizarTexto(row[5])] || row[5] || activeWallets[0];
 
@@ -2601,7 +2618,7 @@
           }
 
           if (evaluarRangoFecha(row[0])) {
-            let filaIndex = row[row.length - 1];
+            let filaIndex = obtenerFilaIndexSeguro(row);
             if (tbPr) {
               tbPr.innerHTML += `<tr><td>${fechaRow}</td><td><b>${row[1]}</b></td><td>${walletReal}</td><td>${row[2]}</td><td style="color:#f59e0b;">RD$ ${m.toFixed(2)}</td>
                 <td>
@@ -2651,8 +2668,8 @@
         tbB.innerHTML = '';
         if (data.bebe && data.bebe.length > 0) {
           data.bebe.filter(row => evaluarRangoFecha(row[0])).forEach(row => {
-            let m = parseFloat(row[3]) || 0;
-            let filaIndex = row[row.length - 1];
+            let m = parseMontoSeguro(row[3]);
+            let filaIndex = obtenerFilaIndexSeguro(row);
             tbB.innerHTML += `<tr><td>${formatearFechaLimpia(row[0])}</td><td><b>${row[2]}</b></td><td>RD$ ${m.toFixed(2)}</td><td style="color:var(--text-main);">${row[4]}</td>
               <td>
                 <button class="btn-action btn-edit" onclick="cargarEdicionBebe(${filaIndex})">✏️</button>
@@ -2667,8 +2684,8 @@
         tbC.innerHTML = '';
         if (data.construccion && data.construccion.length > 0) {
           data.construccion.filter(row => evaluarRangoFecha(row[0]) && !String(row[1]).includes('Patrimonio Activo')).forEach(row => {
-            let m = parseFloat(row[3]) || 0;
-            let filaIndex = row[row.length - 1];
+            let m = parseMontoSeguro(row[3]);
+            let filaIndex = obtenerFilaIndexSeguro(row);
             tbC.innerHTML += `<tr><td>${formatearFechaLimpia(row[0])}</td><td><b>${row[1]}</b></td><td>${row[2]}</td><td>RD$ ${m.toFixed(2)}</td>
               <td>
                 <button class="btn-action btn-edit" onclick="cargarEdicionCasa(${filaIndex})">✏️</button>
@@ -2683,9 +2700,9 @@
         tbM.innerHTML = '';
         if (data.mantenimientos && data.mantenimientos.length > 0) {
           data.mantenimientos.filter(row => evaluarRangoFecha(row[0])).forEach(row => {
-            let m = parseFloat(row[4]) || 0;
+            let m = parseMontoSeguro(row[4]);
             let vehiculoName = row[5] || activeVehiculos[0];
-            let filaIndex = row[row.length - 1];
+            let filaIndex = obtenerFilaIndexSeguro(row);
             tbM.innerHTML += `<tr><td>${formatearFechaLimpia(row[0])}</td><td><b>${vehiculoName}</b></td><td>${row[2]}</td><td>RD$ ${m.toFixed(2)}</td>
               <td>
                 <button class="btn-action btn-edit" onclick="cargarEdicionMurano(${filaIndex})">✏️</button>
@@ -2875,7 +2892,7 @@
     }
 
     function cargarEdicionPresupuesto(filaIndex) {
-      let item = cacheData.presupuesto.find(r => r[r.length - 1] === filaIndex);
+      let item = cacheData.presupuesto.find(r => obtenerFilaIndexSeguro(r) === filaIndex);
       if (item) {
         document.getElementById('presFilaIndex').value = filaIndex;
         document.getElementById('presFecha').value = formatearFechaLimpia(item[0]);
@@ -2884,16 +2901,16 @@
         if (document.getElementById('presWallet')) document.getElementById('presWallet').value = item[5];
         
         let conceptoLimpio = item[3] || '';
-        let mRD = parseFloat(item[4]) || 0;
+        let mRD = parseMontoSeguro(item[4]);
         
         let info = extraerDatosMoneda(item[6], item[7], mRD, conceptoLimpio);
         let moneda = info.moneda;
         let montoOriginal = info.montoOrig;
-        let tasa = item[8] ? item[8] : tasaCaribe_USD;
+        let tasa = parseMontoSeguro(item[8]) || tasaCaribe_USD;
 
         if (conceptoLimpio.includes('[USD $') || conceptoLimpio.includes('[EUR €')) {
           let matchTasa = conceptoLimpio.match(/@\s*([\d\.]+)/);
-          if (matchTasa && matchTasa[1]) tasa = matchTasa[1];
+          if (matchTasa && matchTasa[1]) tasa = parseMontoSeguro(matchTasa[1]);
           conceptoLimpio = conceptoLimpio.replace(/\[(USD|EUR).*?\]\s*/, '').trim();
         }
 
@@ -2908,7 +2925,7 @@
     }
 
     function cargarEdicionAhorros(filaIndex) {
-      let item = cacheData.ahorros.find(r => r[r.length - 1] === filaIndex);
+      let item = cacheData.ahorros.find(r => obtenerFilaIndexSeguro(r) === filaIndex);
       if (item) {
         document.getElementById('ahoFilaIndex').value = filaIndex;
         document.getElementById('ahoFecha').value = formatearFechaLimpia(item[0]);
@@ -2918,16 +2935,16 @@
         if (document.getElementById('ahoWalletDestino')) document.getElementById('ahoWalletDestino').value = item[8] || item[5];
 
         let conceptoLimpio = item[2] || '';
-        let mRD = parseFloat(item[3]) || 0;
+        let mRD = parseMontoSeguro(item[3]);
         
         let info = extraerDatosMoneda(item[6], item[7], mRD, conceptoLimpio);
         let moneda = info.moneda;
         let montoOriginal = info.montoOrig;
-        let tasa = item[8] ? item[8] : tasaCaribe_USD;
+        let tasa = parseMontoSeguro(item[8]) || tasaCaribe_USD;
 
         if (conceptoLimpio.includes('[USD $') || conceptoLimpio.includes('[EUR €')) {
           let matchTasa = conceptoLimpio.match(/@\s*([\d\.]+)/);
-          if (matchTasa && matchTasa[1]) tasa = matchTasa[1];
+          if (matchTasa && matchTasa[1]) tasa = parseMontoSeguro(matchTasa[1]);
           conceptoLimpio = conceptoLimpio.replace(/\[(USD|EUR).*?\]\s*/, '').trim();
         }
 
@@ -2942,7 +2959,7 @@
     }
 
     function cargarEdicionPrestamos(filaIndex) {
-      let item = cacheData.prestamos.find(r => r[r.length - 1] === filaIndex);
+      let item = cacheData.prestamos.find(r => obtenerFilaIndexSeguro(r) === filaIndex);
       if (item) {
         document.getElementById('prestFilaIndex').value = filaIndex;
         document.getElementById('prestFecha').value = formatearFechaLimpia(item[0]);
@@ -2956,7 +2973,7 @@
     }
 
     function cargarEdicionBebe(filaIndex) {
-      let item = cacheData.bebe.find(r => r[r.length - 1] === filaIndex);
+      let item = cacheData.bebe.find(r => obtenerFilaIndexSeguro(r) === filaIndex);
       if (item) {
         document.getElementById('bebeFilaIndex').value = filaIndex;
         document.getElementById('bebeFecha').value = formatearFechaLimpia(item[0]);
@@ -2969,7 +2986,7 @@
     }
 
     function cargarEdicionCasa(filaIndex) {
-      let item = cacheData.construccion.find(r => r[r.length - 1] === filaIndex);
+      let item = cacheData.construccion.find(r => obtenerFilaIndexSeguro(r) === filaIndex);
       if (item) {
         document.getElementById('consFilaIndex').value = filaIndex;
         document.getElementById('consFecha').value = formatearFechaLimpia(item[0]);
@@ -2981,7 +2998,7 @@
     }
 
     function cargarEdicionMurano(filaIndex) {
-      let item = cacheData.mantenimientos.find(r => r[r.length - 1] === filaIndex);
+      let item = cacheData.mantenimientos.find(r => obtenerFilaIndexSeguro(r) === filaIndex);
       if (item) {
         document.getElementById('maintFilaIndex').value = filaIndex;
         document.getElementById('maintFecha').value = formatearFechaLimpia(item[0]);
@@ -3066,8 +3083,8 @@
       const cat = document.getElementById('presCat').value;
       const wallet = document.getElementById('presWallet').value;
       const moneda = document.getElementById('presMoneda').value;
-      const montoOriginal = parseFloat(document.getElementById('presMonto').value) || 0;
-      let tasa = parseFloat(document.getElementById('presTasaCambio').value) || 1;
+      const montoOriginal = parseMontoSeguro(document.getElementById('presMonto').value);
+      let tasa = parseMontoSeguro(document.getElementById('presTasaCambio').value) || 1;
       let conceptoUser = document.getElementById('presConcepto').value.trim();
 
       let montoEnDOP = (moneda === 'USD' || moneda === 'EUR') ? (montoOriginal * tasa) : montoOriginal;
@@ -3104,8 +3121,8 @@
       const walletOrigen = document.getElementById('ahoWallet').value;
       const walletDestino = document.getElementById('ahoWalletDestino').value;
       const moneda = document.getElementById('ahoMoneda').value;
-      const montoOriginal = parseFloat(document.getElementById('ahoMonto').value) || 0;
-      let tasa = parseFloat(document.getElementById('ahoTasaCambio').value) || 1;
+      const montoOriginal = parseMontoSeguro(document.getElementById('ahoMonto').value);
+      let tasa = parseMontoSeguro(document.getElementById('ahoTasaCambio').value) || 1;
       let conceptoUser = document.getElementById('ahoConcepto').value.trim();
 
       let montoEnDOP = (moneda === 'USD' || moneda === 'EUR') ? (montoOriginal * tasa) : montoOriginal;
@@ -3141,8 +3158,8 @@
       e.preventDefault();
       const entidad = document.getElementById('prestEntidad').value;
       const walletAfectada = document.getElementById('prestWallet').value;
-      const montoTotal = parseFloat(document.getElementById('prestMonto').value) || 0;
-      const cuotaPagoHoy = parseFloat(document.getElementById('prestCuotaPagoHoy').value) || 0;
+      const montoTotal = parseMontoSeguro(document.getElementById('prestMonto').value);
+      const cuotaPagoHoy = parseMontoSeguro(document.getElementById('prestCuotaPagoHoy').value);
       const tipo = document.getElementById('prestTipo').value;
       const fecha = document.getElementById('prestFecha').value;
       const notas = document.getElementById('prestNotas').value;
@@ -3169,7 +3186,7 @@
     function guardarBebe(e) {
       e.preventDefault();
       const art = document.getElementById('bebeArticulo').value;
-      const costo = document.getElementById('bebeCosto').value;
+      const costo = parseMontoSeguro(document.getElementById('bebeCosto').value);
       const payload = {
         accion: 'guardarBebe',
         datos: {
@@ -3188,7 +3205,7 @@
     function guardarConstruccion(e) {
       e.preventDefault();
       const proy = document.getElementById('consProyecto').value;
-      const monto = document.getElementById('consMonto').value;
+      const monto = parseMontoSeguro(document.getElementById('consMonto').value);
       const payload = {
         accion: 'guardarObraSolar',
         datos: {
@@ -3206,7 +3223,7 @@
     function guardarMantenimiento(e) {
       e.preventDefault();
       const conc = document.getElementById('maintConcepto').value;
-      const costo = document.getElementById('maintCosto').value;
+      const costo = parseMontoSeguro(document.getElementById('maintCosto').value);
       const vehiculo = document.getElementById('maintVehiculo').value;
       const payload = {
         accion: 'guardarTrabajo',
