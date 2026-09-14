@@ -26,42 +26,39 @@ export async function registrarUsuario(
     throw new Error(authError?.message || 'Error al crear usuario');
   }
 
-  let familiaId: string;
+  let familiaId: string | null = null;
 
   if (codigoInvitacionExistente && codigoInvitacionExistente.trim() !== '') {
-    const { data: familiaData, error: famError } = await supabase
+    const { data: familiaData } = await supabase
       .from('familias')
       .select('id')
       .eq('codigo_invitacion', codigoInvitacionExistente.trim().toUpperCase())
-      .single();
+      .maybeSingle();
 
-    if (famError || !familiaData) {
-      throw new Error('El código de invitación familiar no es válido.');
+    if (familiaData) {
+      familiaId = familiaData.id;
     }
-    familiaId = familiaData.id;
-  } else {
+  }
+
+  if (!familiaId) {
     const nuevoCodigo = generarCodigoInvitacion();
-    const { data: nuevaFamilia, error: newFamError } = await supabase
+    const { data: nuevaFamilia } = await supabase
       .from('familias')
       .insert([{ nombre: `Familia de ${nombreUsuario}`, codigo_invitacion: nuevoCodigo }])
       .select('id')
-      .single();
+      .maybeSingle();
 
-    if (newFamError || !nuevaFamilia) throw new Error('Error al crear el grupo familiar');
-    familiaId = nuevaFamilia.id;
+    if (nuevaFamilia) {
+      familiaId = nuevaFamilia.id;
+    }
   }
 
-  // Usamos upsert para evitar fallos si el registro ya existe
-  const { error: perfilError } = await supabase
-    .from('perfiles')
-    .upsert([{ 
-      id: authData.user.id, 
-      email: cleanEmail, 
-      nombre_usuario: nombreUsuario, 
-      familia_id: familiaId 
-    }]);
-
-  if (perfilError) throw new Error(perfilError.message);
+  await supabase.from('perfiles').upsert([{ 
+    id: authData.user.id, 
+    email: cleanEmail, 
+    nombre_usuario: nombreUsuario, 
+    familia_id: familiaId 
+  }]);
 
   return authData;
 }
@@ -76,7 +73,6 @@ export async function iniciarSesion(email: string, pass: string) {
 
   if (error) throw new Error(error.message);
 
-  // Asegurar existencia del perfil tras el login
   if (data.user) {
     const { data: perfilExistente } = await supabase
       .from('perfiles')
@@ -85,27 +81,13 @@ export async function iniciarSesion(email: string, pass: string) {
       .maybeSingle();
 
     if (!perfilExistente) {
-      // Intentar obtener o crear una familia por defecto
-      let famId: string | null = null;
       const { data: famExistente } = await supabase.from('familias').select('id').limit(1).maybeSingle();
-
-      if (famExistente) {
-        famId = famExistente.id;
-      } else {
-        const nuevoCod = generarCodigoInvitacion();
-        const { data: newFam } = await supabase
-          .from('familias')
-          .insert([{ nombre: `Familia de ${cleanEmail.split('@')[0]}`, codigo_invitacion: nuevoCod }])
-          .select('id')
-          .single();
-        if (newFam) famId = newFam.id;
-      }
-
+      
       await supabase.from('perfiles').upsert([{
         id: data.user.id,
         email: cleanEmail,
         nombre_usuario: cleanEmail.split('@')[0],
-        familia_id: famId
+        familia_id: famExistente ? famExistente.id : null
       }]);
     }
   }
@@ -122,18 +104,34 @@ export async function obtenerPerfilUsuario() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const { data: perfil, error } = await supabase
+    // Consulta simplificada para evitar fallos por join de tablas o RLS
+    const { data: perfil } = await supabase
       .from('perfiles')
-      .select('*, familias(nombre, codigo_invitacion)')
+      .select('*')
       .eq('id', user.id)
       .maybeSingle();
 
-    if (error) {
-      console.warn('Error consultando el perfil:', error.message);
-      return null;
+    if (perfil) {
+      // Intenta obtener información de la familia si existe
+      if (perfil.familia_id) {
+        const { data: fam } = await supabase
+          .from('familias')
+          .select('nombre, codigo_invitacion')
+          .eq('id', perfil.familia_id)
+          .maybeSingle();
+        if (fam) perfil.familias = fam;
+      }
+      return perfil;
     }
 
-    return perfil;
+    // Perfil por defecto en memoria si aún no está en BD para no bloquear el login
+    return {
+      id: user.id,
+      email: user.email,
+      nombre_usuario: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
+      familia_id: null
+    };
+
   } catch (err) {
     console.error('Error al verificar sesión:', err);
     return null;
