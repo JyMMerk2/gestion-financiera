@@ -14,6 +14,22 @@ export default function App() {
   const [errorInicial, setErrorInicial] = useState<string | null>(null);
   const [seccionActual, setSeccionActual] = useState<'dashboard' | 'presupuesto' | 'ahorros' | 'patrimonio' | 'prestamos' | 'configuracion'>('dashboard');
 
+  const [modoOscuro, setModoOscuro] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (modoOscuro) {
+      document.body.style.backgroundColor = '#0b0f19';
+      document.body.style.color = '#f1f5f9';
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.body.style.backgroundColor = '#f8fafc';
+      document.body.style.color = '#0f172a';
+      localStorage.setItem('theme', 'light');
+    }
+  }, [modoOscuro]);
+
   const [mesSeleccionado] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -45,7 +61,7 @@ export default function App() {
 
   if (cargando) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: '#ffffff', fontFamily: 'sans-serif' }}>
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#0b0f19', color: '#ffffff', fontFamily: 'sans-serif' }}>
         <b style={{ fontSize: '16px' }}>⏳ Cargando Gestión Financiera...</b>
       </div>
     );
@@ -53,9 +69,9 @@ export default function App() {
 
   if (errorInicial) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif', background: '#f8fafc', minHeight: '100vh' }}>
+      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif', background: modoOscuro ? '#0b0f19' : '#f8fafc', minHeight: '100vh', color: modoOscuro ? '#fff' : '#000' }}>
         <h3 style={{ color: '#ef4444', fontWeight: 'bold' }}>⚠️ No se pudo inicializar la aplicación</h3>
-        <p style={{ color: '#64748b', fontSize: '13px' }}>{errorInicial}</p>
+        <p style={{ color: modoOscuro ? '#94a3b8' : '#64748b', fontSize: '13px' }}>{errorInicial}</p>
         <button
           onClick={verificarSesion}
           style={{ padding: '10px 20px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '12px' }}
@@ -71,17 +87,25 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: modoOscuro ? '#0b0f19' : '#f8fafc', 
+      color: modoOscuro ? '#f1f5f9' : '#0f172a',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      transition: 'all 0.2s ease'
+    }}>
       
-      {/* Navegación independiente */}
+      {/* Navegación pasando el estado del modo oscuro */}
       <Navigation 
         vistaActual={seccionActual} 
         setVistaActual={setSeccionActual} 
         onLogout={handleLogout}
+        modoOscuro={modoOscuro}
+        setModoOscuro={setModoOscuro}
       />
 
       {/* Contenido Dinámico */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 20px' }}>
+      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 20px' }}>
         {seccionActual === 'dashboard' && (
           <Dashboard
             perfil={perfil}
@@ -117,13 +141,21 @@ export default function App() {
         )}
 
         {seccionActual === 'configuracion' && (
-          <div style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: '#0f172a' }}>Configuración del Perfil y Grupo Familiar</h2>
-            <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ 
+            background: modoOscuro ? '#1e293b' : '#ffffff', 
+            padding: '24px', 
+            borderRadius: '16px', 
+            border: modoOscuro ? '1px solid #334155' : '1px solid #e2e8f0', 
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)' 
+          }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: modoOscuro ? '#38bdf8' : '#0f172a' }}>
+              Configuración del Perfil y Grupo Familiar
+            </h2>
+            <div style={{ fontSize: '13px', color: modoOscuro ? '#cbd5e1' : '#475569', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <p>Usuario: <strong>{perfil?.nombre_usuario || perfil?.email}</strong></p>
               <p>Email: <strong>{perfil?.email}</strong></p>
               <p>
-                Código de Invitación Familiar: <strong style={{ color: '#4f46e5' }}>{perfil?.familias?.codigo_invitacion || 'No asignado'}</strong>
+                Código de Invitación Familiar: <strong style={{ color: '#38bdf8' }}>{perfil?.familias?.codigo_invitacion || 'No asignado'}</strong>
               </p>
             </div>
           </div>
