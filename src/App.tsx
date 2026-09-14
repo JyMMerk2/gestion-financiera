@@ -1,184 +1,134 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  LayoutDashboard, 
-  PieChart, 
-  PiggyBank, 
-  Building2, 
-  CreditCard, 
-  Settings, 
-  Moon, 
-  Sun, 
-  LogOut 
-} from 'lucide-react';
-import { cerrarSesion } from '../services/auth';
+import { useState, useEffect } from 'react';
+import { AuthModal } from './components/AuthModal';
+import { Navigation } from './components/Navigation';
+import { Dashboard } from './components/Dashboard';
+import { Presupuesto } from './components/Presupuesto';
+import { Ahorros } from './components/Ahorros';
+import { Patrimonio } from './components/Patrimonio';
+import Prestamos from './components/Prestamos';
+import { obtenerPerfilUsuario, cerrarSesion } from './services/auth';
 
-interface NavigationProps {
-  vistaActual: string;
-  setVistaActual: (vista: any) => void;
-  onLogout: () => void;
-}
+export default function App() {
+  const [perfil, setPerfil] = useState<any>(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorInicial, setErrorInicial] = useState<string | null>(null);
+  const [seccionActual, setSeccionActual] = useState<'dashboard' | 'presupuesto' | 'ahorros' | 'patrimonio' | 'prestamos' | 'configuracion'>('dashboard');
 
-export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaActual, onLogout }) => {
-  const [modoOscuro, setModoOscuro] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
+  const [mesSeleccionado] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  useEffect(() => {
-    if (modoOscuro) {
-      document.body.style.backgroundColor = '#0f172a';
-      document.body.style.color = '#f8fafc';
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.style.backgroundColor = '#f8fafc';
-      document.body.style.color = '#0f172a';
-      localStorage.setItem('theme', 'light');
+  const verificarSesion = async () => {
+    setCargando(true);
+    setErrorInicial(null);
+    try {
+      const perf = await obtenerPerfilUsuario();
+      setPerfil(perf);
+    } catch (err: any) {
+      console.error('Error al verificar sesión:', err);
+      setErrorInicial(err?.message || 'Fallo de conexión inicial');
+      setPerfil(null);
+    } finally {
+      setCargando(false);
     }
-  }, [modoOscuro]);
+  };
 
-  const toggleTema = () => setModoOscuro(!modoOscuro);
+  useEffect(() => {
+    verificarSesion();
+  }, []);
 
-  const menuItems = [
-    { id: 'dashboard', nombre: 'Dashboard', icon: LayoutDashboard },
-    { id: 'presupuesto', nombre: 'Presupuesto', icon: PieChart },
-    { id: 'ahorros', nombre: 'Ahorros', icon: PiggyBank },
-    { id: 'patrimonio', nombre: 'Patrimonio', icon: Building2 },
-    { id: 'prestamos', nombre: 'Préstamos', icon: CreditCard },
-  ];
+  const handleLogout = async () => {
+    await cerrarSesion();
+    setPerfil(null);
+  };
+
+  if (cargando) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: '#ffffff', fontFamily: 'sans-serif' }}>
+        <b style={{ fontSize: '16px' }}>⏳ Cargando Gestión Financiera...</b>
+      </div>
+    );
+  }
+
+  if (errorInicial) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif', background: '#f8fafc', minHeight: '100vh' }}>
+        <h3 style={{ color: '#ef4444', fontWeight: 'bold' }}>⚠️ No se pudo inicializar la aplicación</h3>
+        <p style={{ color: '#64748b', fontSize: '13px' }}>{errorInicial}</p>
+        <button
+          onClick={verificarSesion}
+          style={{ padding: '10px 20px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', marginTop: '12px' }}
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  if (!perfil) {
+    return <AuthModal onSuccess={verificarSesion} />;
+  }
 
   return (
-    <nav style={{
-      background: modoOscuro ? '#1e293b' : '#ffffff',
-      borderBottom: modoOscuro ? '1px solid #334155' : '1px solid #e2e8f0',
-      padding: '12px 24px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 1000,
-      boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '12px'
-    }}>
-      {/* Grupo Izquierdo: Botones del Menú Principal */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        overflowX: 'auto',
-        scrollbarWidth: 'none'
-      }}>
-        {menuItems.map((item) => {
-          const Icono = item.icon;
-          const activo = vistaActual === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setVistaActual(item.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: '12px',
-                border: 'none',
-                background: activo 
-                  ? (modoOscuro ? '#38bdf8' : '#0f172a') 
-                  : 'transparent',
-                color: activo 
-                  ? '#ffffff' 
-                  : (modoOscuro ? '#94a3b8' : '#64748b'),
-                fontSize: '13px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Icono size={16} strokeWidth={2.2} />
-              <span>{item.nombre}</span>
-            </button>
-          );
-        })}
-      </div>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      
+      {/* Navegación independiente */}
+      <Navigation 
+        vistaActual={seccionActual} 
+        setVistaActual={setSeccionActual} 
+        onLogout={handleLogout}
+      />
 
-      {/* Grupo Derecho: Configuración, Modo Oscuro y Salir */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}>
-        {/* Botón Modo Oscuro / Claro */}
-        <button
-          onClick={toggleTema}
-          title={modoOscuro ? 'Modo Claro' : 'Modo Oscuro'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '38px',
-            height: '38px',
-            borderRadius: '10px',
-            border: modoOscuro ? '1px solid #334155' : '1px solid #e2e8f0',
-            background: modoOscuro ? '#0f172a' : '#f8fafc',
-            color: modoOscuro ? '#fbbf24' : '#475569',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          {modoOscuro ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+      {/* Contenido Dinámico */}
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 20px' }}>
+        {seccionActual === 'dashboard' && (
+          <Dashboard
+            perfil={perfil}
+            onLogout={handleLogout}
+            onNavigate={(sec) => setSeccionActual(sec as any)}
+          />
+        )}
 
-        {/* Botón Configuración */}
-        <button
-          onClick={() => setVistaActual('configuracion')}
-          title="Configuración"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '38px',
-            height: '38px',
-            borderRadius: '10px',
-            border: vistaActual === 'configuracion' 
-              ? 'none' 
-              : (modoOscuro ? '1px solid #334155' : '1px solid #e2e8f0'),
-            background: vistaActual === 'configuracion' 
-              ? (modoOscuro ? '#38bdf8' : '#0f172a') 
-              : (modoOscuro ? '#0f172a' : '#f8fafc'),
-            color: vistaActual === 'configuracion' 
-              ? '#ffffff' 
-              : (modoOscuro ? '#94a3b8' : '#475569'),
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <Settings size={18} />
-        </button>
+        {seccionActual === 'presupuesto' && (
+          <Presupuesto
+            familiaId={perfil.familia_id}
+            mesSeleccionado={mesSeleccionado}
+          />
+        )}
 
-        {/* Botón Cerrar Sesión */}
-        <button
-          onClick={async () => {
-            await cerrarSesion();
-            onLogout();
-          }}
-          title="Cerrar Sesión"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '38px',
-            height: '38px',
-            borderRadius: '10px',
-            border: 'none',
-            background: 'rgba(239, 68, 68, 0.1)',
-            color: '#ef4444',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <LogOut size={18} />
-        </button>
-      </div>
-    </nav>
+        {seccionActual === 'ahorros' && (
+          <Ahorros
+            familiaId={perfil.familia_id}
+            mesSeleccionado={mesSeleccionado}
+          />
+        )}
+
+        {seccionActual === 'patrimonio' && (
+          <Patrimonio
+            familiaId={perfil.familia_id}
+          />
+        )}
+
+        {seccionActual === 'prestamos' && (
+          <Prestamos
+            familiaId={perfil.familia_id}
+          />
+        )}
+
+        {seccionActual === 'configuracion' && (
+          <div style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: '#0f172a' }}>Configuración del Perfil y Grupo Familiar</h2>
+            <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <p>Usuario: <strong>{perfil?.nombre_usuario || perfil?.email}</strong></p>
+              <p>Email: <strong>{perfil?.email}</strong></p>
+              <p>
+                Código de Invitación Familiar: <strong style={{ color: '#4f46e5' }}>{perfil?.familias?.codigo_invitacion || 'No asignado'}</strong>
+              </p>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
   );
-};
+}
