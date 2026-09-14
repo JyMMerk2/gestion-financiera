@@ -41,7 +41,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
   const [passConfirm, setPassConfirm] = useState('');
   const [nombreUsuario, setNombreUsuario] = useState('');
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
-  
+
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'error' | 'success'; texto: string } | null>(null);
 
@@ -88,7 +88,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
         width: '100%', maxWidth: '850px', display: 'flex', minHeight: '520px',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e5e7eb'
       }}>
-        
+
         {/* Panel Izquierdo: Slider de imágenes con frases */}
         <div style={{
           flex: '1', position: 'relative', display: 'flex', flexDirection: 'column',
