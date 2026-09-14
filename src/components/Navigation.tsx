@@ -25,10 +25,12 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
 
   useEffect(() => {
     if (modoOscuro) {
-      document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#0b0f19';
+      document.body.style.color = '#f1f5f9';
       localStorage.setItem('theme', 'dark');
     } else {
-      document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '#f8fafc';
+      document.body.style.color = '#0f172a';
       localStorage.setItem('theme', 'light');
     }
   }, [modoOscuro]);
@@ -43,69 +45,167 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
     { id: 'prestamos', nombre: 'Préstamos', icon: CreditCard },
   ];
 
+  const bgColor = modoOscuro ? '#111827' : '#ffffff';
+  const borderColor = modoOscuro ? '#1f2937' : '#e2e8f0';
+
   return (
-    <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header style={{
+      background: bgColor,
+      borderBottom: `1px solid ${borderColor}`,
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.03)'
+    }}>
+      <div style={{
+        maxWidth: '1280px',
+        margin: '0 auto',
+        padding: '0 24px',
+        height: '64px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        
+        {/* LOGO + NAVEGACIÓN PRINCIPAL */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           
-          {/* Menú con Iconos Vectoriales */}
-          <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto py-2">
+          {/* Nombre de la App */}
+          <div style={{ 
+            fontSize: '15px', 
+            fontWeight: '900', 
+            letterSpacing: '-0.02em', 
+            color: modoOscuro ? '#38bdf8' : '#0f172a',
+            textTransform: 'uppercase'
+          }}>
+            Gestión Financiera
+          </div>
+
+          {/* Menú de Botones Modernos */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {menuItems.map((item) => {
               const Icono = item.icon;
               const activo = vistaActual === item.id;
+              
+              const itemBg = activo 
+                ? (modoOscuro ? '#1e293b' : '#0f172a') 
+                : 'transparent';
+              
+              const itemColor = activo 
+                ? '#ffffff' 
+                : (modoOscuro ? '#94a3b8' : '#64748b');
+
               return (
                 <button
                   key={item.id}
                   onClick={() => setVistaActual(item.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                    activo
-                      ? 'bg-slate-900 text-white dark:bg-sky-500 dark:text-white shadow-md'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: itemBg,
+                    color: itemColor,
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    outline: 'none'
+                  }}
                 >
-                  <Icono className="w-4 h-4" />
+                  <Icono size={15} strokeWidth={activo ? 2.5 : 2} />
                   <span>{item.nombre}</span>
                 </button>
               );
             })}
-          </div>
-
-          {/* Opciones Derechas */}
-          <div className="flex items-center space-x-2 pl-2">
-            <button
-              onClick={toggleTema}
-              title={modoOscuro ? 'Modo Claro' : 'Modo Oscuro'}
-              className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              {modoOscuro ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-            </button>
-
-            <button
-              onClick={() => setVistaActual('configuracion')}
-              title="Configuración"
-              className={`p-2 rounded-xl transition-colors ${
-                vistaActual === 'configuracion'
-                  ? 'bg-slate-900 text-white dark:bg-sky-500'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={async () => {
-                await cerrarSesion();
-                onLogout();
-              }}
-              title="Cerrar Sesión"
-              className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+          </nav>
 
         </div>
+
+        {/* ACCIONES DE LA DERECHA */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          
+          {/* Toggle Modo Oscuro */}
+          <button
+            onClick={toggleTema}
+            title={modoOscuro ? 'Modo Claro' : 'Modo Oscuro'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              border: `1px solid ${borderColor}`,
+              background: 'transparent',
+              color: modoOscuro ? '#f59e0b' : '#64748b',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            {modoOscuro ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+
+          {/* Botón Configuración */}
+          <button
+            onClick={() => setVistaActual('configuracion')}
+            title="Configuración"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              border: vistaActual === 'configuracion' 
+                ? 'none' 
+                : `1px solid ${borderColor}`,
+              background: vistaActual === 'configuracion' 
+                ? (modoOscuro ? '#38bdf8' : '#0f172a') 
+                : 'transparent',
+              color: vistaActual === 'configuracion' 
+                ? '#ffffff' 
+                : (modoOscuro ? '#94a3b8' : '#64748b'),
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            <Settings size={16} />
+          </button>
+
+          <div style={{ width: '1px', height: '20px', background: borderColor, margin: '0 4px' }} />
+
+          {/* Botón Cerrar Sesión */}
+          <button
+            onClick={async () => {
+              await cerrarSesion();
+              onLogout();
+            }}
+            title="Cerrar Sesión"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: 'none',
+              background: modoOscuro ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2',
+              color: '#ef4444',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            <LogOut size={15} />
+            <span>Salir</span>
+          </button>
+
+        </div>
+
       </div>
-    </nav>
+    </header>
   );
 };
