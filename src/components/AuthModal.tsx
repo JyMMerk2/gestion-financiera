@@ -1,28 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { iniciarSesion, registrarUsuario } from '../services/auth';
 
+// Importación directa de imágenes desde la carpeta img
+import fondo1 from '../../img/fondo1.jfif';
+import fondo2 from '../../img/fondo2.jfif';
+import fondo3 from '../../img/fondo3.jfif';
+import fondo4 from '../../img/fondo4.jfif';
+
 interface AuthModalProps {
   onSuccess: () => void;
 }
 
 const SLIDES = [
   {
-    imagen: '/img/fondo1.jfif',
+    imagen: fondo1,
     titulo: 'Controla tus Finanzas',
     descripcion: 'Gestiona ingresos, gastos y presupuestos de forma organizada.'
   },
   {
-    imagen: '/img/fondo2.jfif',
+    imagen: fondo2,
     titulo: 'Planificación Inteligente',
     descripcion: 'Visualiza métricas en tiempo real sobre la economía familiar.'
   },
   {
-    imagen: '/img/fondo3.jfif',
+    imagen: fondo3,
     titulo: 'Acceso Multi-Moneda',
     descripcion: 'Monitorea tus cuentas en múltiples divisas desde cualquier lugar.'
   },
   {
-    imagen: '/img/fondo4.jfif',
+    imagen: fondo4,
     titulo: 'Haz Crecer tu Patrimonio',
     descripcion: 'Registra tus ahorros, inversiones y metas a futuro.'
   }
@@ -39,7 +45,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'error' | 'success'; texto: string } | null>(null);
 
-  // Estado y temporizador para la rotación de imágenes del slider
   const [slideActual, setSlideActual] = useState(0);
 
   useEffect(() => {
@@ -94,14 +99,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
               key={idx}
               src={slide.imagen}
               alt={slide.titulo}
-              onError={(e) => {
-                // Fallback automático por si Vite busca las imágenes sin la barra inicial
-                const target = e.target as HTMLImageElement;
-                if (!target.dataset.tried) {
-                  target.dataset.tried = 'true';
-                  target.src = slide.imagen.replace('/img/', 'img/');
-                }
-              }}
               style={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%',
                 objectFit: 'cover', objectPosition: 'center',
@@ -112,7 +109,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
             />
           ))}
 
-          {/* Capa de degradado oscuro sobre la imagen para legibilidad del texto */}
+          {/* Capa de degradado oscuro sobre la imagen */}
           <div style={{
             position: 'absolute', inset: 0,
             background: 'linear-gradient(to top, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.3) 100%)',
@@ -128,7 +125,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
               {SLIDES[slideActual].descripcion}
             </p>
 
-            {/* Puntos de navegación del slider */}
+            {/* Puntos de navegación */}
             <div style={{ display: 'flex', gap: '6px' }}>
               {SLIDES.map((_, idx) => (
                 <div
@@ -146,7 +143,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
           </div>
         </div>
 
-        {/* Panel Derecho: Formulario de Login / Registro */}
+        {/* Panel Derecho: Formulario */}
         <div style={{
           width: '100%', maxWidth: '400px', padding: '36px 32px',
           display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#ffffff'
