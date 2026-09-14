@@ -154,3 +154,5 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     </div>
   );
 };
+
+export default Prestamos;
