@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AuthModal } from './components/AuthModal';
+import { Navigation } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
 import { Presupuesto } from './components/Presupuesto';
 import { Ahorros } from './components/Ahorros';
@@ -11,7 +12,7 @@ export default function App() {
   const [perfil, setPerfil] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
   const [errorInicial, setErrorInicial] = useState<string | null>(null);
-  const [seccionActual, setSeccionActual] = useState<'dashboard' | 'presupuesto' | 'ahorros' | 'patrimonio' | 'prestamos'>('dashboard');
+  const [seccionActual, setSeccionActual] = useState<'dashboard' | 'presupuesto' | 'ahorros' | 'patrimonio' | 'prestamos' | 'configuracion'>('dashboard');
 
   const [mesSeleccionado] = useState(() => {
     const now = new Date();
@@ -37,22 +38,27 @@ export default function App() {
     verificarSesion();
   }, []);
 
+  const handleLogout = async () => {
+    await cerrarSesion();
+    setPerfil(null);
+  };
+
   if (cargando) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif', background: '#f3f4f6' }}>
-        <b style={{ color: '#111827', fontSize: '16px' }}>⏳ Cargando Gestión Financiera...</b>
+      <div className="flex h-screen items-center justify-center bg-slate-900 text-white font-sans">
+        <b className="text-base">⏳ Cargando Gestión Financiera...</b>
       </div>
     );
   }
 
   if (errorInicial) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif', background: '#f3f4f6', minHeight: '100vh' }}>
-        <h3 style={{ color: '#ef4444' }}>⚠️ No se pudo inicializar la aplicación</h3>
-        <p style={{ color: '#4b5563', fontSize: '13px' }}>{errorInicial}</p>
+      <div className="p-10 text-center font-sans bg-slate-100 dark:bg-slate-900 min-h-screen">
+        <h3 className="text-rose-500 font-bold text-lg mb-2">⚠️ No se pudo inicializar la aplicación</h3>
+        <p className="text-slate-600 dark:text-slate-400 text-xs mb-4">{errorInicial}</p>
         <button
           onClick={verificarSesion}
-          style={{ padding: '8px 16px', background: '#111827', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+          className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs hover:bg-slate-800 transition-colors"
         >
           Reintentar
         </button>
@@ -65,50 +71,21 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Barra de navegación superior */}
-      <div style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb', padding: '12px 20px', display: 'flex', gap: '8px', alignItems: 'center', overflowX: 'auto' }}>
-        <button
-          onClick={() => setSeccionActual('dashboard')}
-          style={{ padding: '8px 14px', borderRadius: '9999px', border: '1px solid #e5e7eb', background: seccionActual === 'dashboard' ? '#111827' : '#f9fafb', color: seccionActual === 'dashboard' ? '#fff' : '#111827', fontWeight: '800', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap' }}
-        >
-          📌 Dashboard
-        </button>
-        <button
-          onClick={() => setSeccionActual('presupuesto')}
-          style={{ padding: '8px 14px', borderRadius: '9999px', border: '1px solid #e5e7eb', background: seccionActual === 'presupuesto' ? '#111827' : '#f9fafb', color: seccionActual === 'presupuesto' ? '#fff' : '#111827', fontWeight: '800', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap' }}
-        >
-          📊 Presupuesto
-        </button>
-        <button
-          onClick={() => setSeccionActual('ahorros')}
-          style={{ padding: '8px 14px', borderRadius: '9999px', border: '1px solid #e5e7eb', background: seccionActual === 'ahorros' ? '#111827' : '#f9fafb', color: seccionActual === 'ahorros' ? '#fff' : '#111827', fontWeight: '800', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap' }}
-        >
-          🏦 Ahorros
-        </button>
-        <button
-          onClick={() => setSeccionActual('patrimonio')}
-          style={{ padding: '8px 14px', borderRadius: '9999px', border: '1px solid #e5e7eb', background: seccionActual === 'patrimonio' ? '#111827' : '#f9fafb', color: seccionActual === 'patrimonio' ? '#fff' : '#111827', fontWeight: '800', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap' }}
-        >
-          💎 Patrimonio
-        </button>
-        <button
-          onClick={() => setSeccionActual('prestamos')}
-          style={{ padding: '8px 14px', borderRadius: '9999px', border: '1px solid #e5e7eb', background: seccionActual === 'prestamos' ? '#111827' : '#f9fafb', color: seccionActual === 'prestamos' ? '#fff' : '#111827', fontWeight: '800', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap' }}
-        >
-          💳 Préstamos
-        </button>
-      </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200 font-sans">
+      
+      {/* Componente de Navegación Independiente */}
+      <Navigation 
+        vistaActual={seccionActual} 
+        setVistaActual={setSeccionActual} 
+        onLogout={handleLogout}
+      />
 
-      {/* Contenido dinámico */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+      {/* Contenido Dinámico */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {seccionActual === 'dashboard' && (
           <Dashboard
             perfil={perfil}
-            onLogout={async () => {
-              await cerrarSesion();
-              setPerfil(null);
-            }}
+            onLogout={handleLogout}
             onNavigate={(sec) => setSeccionActual(sec as any)}
           />
         )}
@@ -138,7 +115,20 @@ export default function App() {
             familiaId={perfil.familia_id}
           />
         )}
-      </div>
+
+        {seccionActual === 'configuracion' && (
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h2 className="text-lg font-extrabold mb-4">Configuración del Perfil y Grupo Familiar</h2>
+            <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+              <p>Usuario: <strong>{perfil?.nombre_usuario || perfil?.email}</strong></p>
+              <p>Email: <strong>{perfil?.email}</strong></p>
+              <p>
+                Código de Invitación Familiar: <strong className="text-indigo-600 dark:text-indigo-400">{perfil?.familias?.codigo_invitacion || 'No asignado'}</strong>
+              </p>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
