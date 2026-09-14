@@ -95,7 +95,6 @@ export default function App() {
       transition: 'all 0.2s ease'
     }}>
       
-      {/* Navegación pasando el estado del modo oscuro */}
       <Navigation 
         vistaActual={seccionActual} 
         setVistaActual={setSeccionActual} 
@@ -104,13 +103,13 @@ export default function App() {
         setModoOscuro={setModoOscuro}
       />
 
-      {/* Contenido Dinámico */}
       <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 20px' }}>
         {seccionActual === 'dashboard' && (
           <Dashboard
             perfil={perfil}
             onLogout={handleLogout}
             onNavigate={(sec) => setSeccionActual(sec as any)}
+            modoOscuro={modoOscuro}
           />
         )}
 
