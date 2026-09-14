@@ -15,12 +15,16 @@ export async function registrarUsuario(
   nombreUsuario: string,
   codigoInvitacionExistente?: string
 ) {
+  const cleanEmail = email.trim();
+
   const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
+    email: cleanEmail,
     password: pass,
   });
 
-  if (authError || !authData.user) throw new Error(authError?.message || 'Error al crear usuario');
+  if (authError || !authData.user) {
+    throw new Error(authError?.message || 'Error al crear usuario');
+  }
 
   let familiaId: string;
 
@@ -47,9 +51,15 @@ export async function registrarUsuario(
     familiaId = nuevaFamilia.id;
   }
 
+  // Usamos upsert para evitar fallos si el registro ya existe
   const { error: perfilError } = await supabase
     .from('perfiles')
-    .insert([{ id: authData.user.id, email, nombre_usuario: nombreUsuario, familia_id: familiaId }]);
+    .upsert([{ 
+      id: authData.user.id, 
+      email: cleanEmail, 
+      nombre_usuario: nombreUsuario, 
+      familia_id: familiaId 
+    }]);
 
   if (perfilError) throw new Error(perfilError.message);
 
@@ -57,11 +67,49 @@ export async function registrarUsuario(
 }
 
 export async function iniciarSesion(email: string, pass: string) {
+  const cleanEmail = email.trim();
+
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
+    email: cleanEmail,
     password: pass,
   });
+
   if (error) throw new Error(error.message);
+
+  // Asegurar existencia del perfil tras el login
+  if (data.user) {
+    const { data: perfilExistente } = await supabase
+      .from('perfiles')
+      .select('id')
+      .eq('id', data.user.id)
+      .maybeSingle();
+
+    if (!perfilExistente) {
+      // Intentar obtener o crear una familia por defecto
+      let famId: string | null = null;
+      const { data: famExistente } = await supabase.from('familias').select('id').limit(1).maybeSingle();
+
+      if (famExistente) {
+        famId = famExistente.id;
+      } else {
+        const nuevoCod = generarCodigoInvitacion();
+        const { data: newFam } = await supabase
+          .from('familias')
+          .insert([{ nombre: `Familia de ${cleanEmail.split('@')[0]}`, codigo_invitacion: nuevoCod }])
+          .select('id')
+          .single();
+        if (newFam) famId = newFam.id;
+      }
+
+      await supabase.from('perfiles').upsert([{
+        id: data.user.id,
+        email: cleanEmail,
+        nombre_usuario: cleanEmail.split('@')[0],
+        familia_id: famId
+      }]);
+    }
+  }
+
   return data;
 }
 
@@ -78,7 +126,7 @@ export async function obtenerPerfilUsuario() {
       .from('perfiles')
       .select('*, familias(nombre, codigo_invitacion)')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.warn('Error consultando el perfil:', error.message);
