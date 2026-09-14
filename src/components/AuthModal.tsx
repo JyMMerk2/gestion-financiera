@@ -90,12 +90,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
           justifyContent: 'flex-end', padding: '30px', color: '#ffffff', overflow: 'hidden'
         }}>
           {SLIDES.map((slide, idx) => (
-            <div
+            <img
               key={idx}
+              src={slide.imagen}
+              alt={slide.titulo}
+              onError={(e) => {
+                // Fallback automático por si Vite busca las imágenes sin la barra inicial
+                const target = e.target as HTMLImageElement;
+                if (!target.dataset.tried) {
+                  target.dataset.tried = 'true';
+                  target.src = slide.imagen.replace('/img/', 'img/');
+                }
+              }}
               style={{
-                position: 'absolute', inset: 0,
-                backgroundImage: `url(${slide.imagen})`,
-                backgroundSize: 'cover', backgroundPosition: 'center',
+                position: 'absolute', inset: 0, width: '100%', height: '100%',
+                objectFit: 'cover', objectPosition: 'center',
                 opacity: idx === slideActual ? 1 : 0,
                 transition: 'opacity 1s ease-in-out',
                 zIndex: 1
@@ -106,7 +115,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
           {/* Capa de degradado oscuro sobre la imagen para legibilidad del texto */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(to top, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.2) 100%)',
+            background: 'linear-gradient(to top, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.3) 100%)',
             zIndex: 2
           }} />
 
