@@ -14,10 +14,11 @@ import { cerrarSesion } from '../services/auth';
 
 interface NavigationProps {
   vistaActual: string;
-  setVistaActual: (vista: string) => void;
+  setVistaActual: (vista: any) => void;
+  onLogout: () => void;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaActual }) => {
+export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaActual, onLogout }) => {
   const [modoOscuro, setModoOscuro] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
   });
@@ -47,7 +48,7 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* Menú de Vistas con iconos vectoriales */}
+          {/* Menú con Iconos Vectoriales */}
           <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto py-2">
             {menuItems.map((item) => {
               const Icono = item.icon;
@@ -69,7 +70,7 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
             })}
           </div>
 
-          {/* Opciones Derechas: Configuración, Modo Oscuro y Cerrar Sesión */}
+          {/* Opciones Derechas */}
           <div className="flex items-center space-x-2 pl-2">
             <button
               onClick={toggleTema}
@@ -92,7 +93,10 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
             </button>
 
             <button
-              onClick={() => cerrarSesion()}
+              onClick={async () => {
+                await cerrarSesion();
+                onLogout();
+              }}
               title="Cerrar Sesión"
               className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
             >
