@@ -732,8 +732,7 @@
         <div style="display: flex; align-items: center; gap: 10px;">
           <div style="display: flex; align-items: center; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 9999px; padding: 4px 12px; gap: 10px;">
             <button onclick="cambiarMesRelativo(-1)" style="background: none; border: none; color: var(--text-main); font-weight: bold; cursor: pointer; font-size: 14px; padding: 2px 6px;">❮</button>
-            <span id="labelMesPeriodoHeader" style="font-size: 12px; font-weight: 800; color: var(--text-main); min-width: 80px; text-align: center;">Ago 2026</span>
-            <button onclick="cambiarMesRelativo(1)" style="background: none; border: none; color: var(--text-main); font-weight: bold; cursor: pointer; font-size: 14px; padding: 2px 6px;">❯</button>
+            <span id="labelMesPeriodoHeader" style="font-size: 12px; font-weight: 800; color: var(--text-main); min-width: 80px; text-align: center;">Sep 2026</span>
           </div>
           <input type="month" id="filtroMesPeriodo" onchange="cargarDatosApp()" style="display: none;">
 
@@ -2293,12 +2292,19 @@
     }
 
     function inicializarSistema() {
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      
+      const today = `${year}-${month}-${day}`;
+      const mesDefault = `${year}-${month}`;
+
       document.querySelectorAll('input[type="date"]').forEach(inp => inp.value = today);
       
-      const mesDefault = today.substring(0, 7);
       if (document.getElementById('filtroMesPeriodo')) {
         document.getElementById('filtroMesPeriodo').value = mesDefault;
+        actualizarEtiquetaMesHeader();
       }
       if (document.getElementById('pdfMesInicio')) {
         document.getElementById('pdfMesInicio').value = mesDefault;
