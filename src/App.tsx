@@ -4,12 +4,13 @@ import { Dashboard } from './components/Dashboard';
 import { Presupuesto } from './components/Presupuesto';
 import { Ahorros } from './components/Ahorros';
 import { Patrimonio } from './components/Patrimonio';
-import { Prestamos } from './components/Prestamos';
+import Prestamos from './components/Prestamos';
 import { obtenerPerfilUsuario, cerrarSesion } from './services/auth';
 
 export default function App() {
   const [perfil, setPerfil] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
+  const [errorInicial, setErrorInicial] = useState<string | null>(null);
   const [seccionActual, setSeccionActual] = useState<'dashboard' | 'presupuesto' | 'ahorros' | 'patrimonio' | 'prestamos'>('dashboard');
 
   const [mesSeleccionado] = useState(() => {
@@ -19,10 +20,13 @@ export default function App() {
 
   const verificarSesion = async () => {
     setCargando(true);
+    setErrorInicial(null);
     try {
       const perf = await obtenerPerfilUsuario();
       setPerfil(perf);
-    } catch {
+    } catch (err: any) {
+      console.error('Error al verificar sesión:', err);
+      setErrorInicial(err?.message || 'Fallo de conexión inicial');
       setPerfil(null);
     } finally {
       setCargando(false);
@@ -36,7 +40,22 @@ export default function App() {
   if (cargando) {
     return (
       <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif', background: '#f3f4f6' }}>
-        <b>Cargando Gestión Financiera...</b>
+        <b style={{ color: '#111827', fontSize: '16px' }}>⏳ Cargando Gestión Financiera...</b>
+      </div>
+    );
+  }
+
+  if (errorInicial) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif', background: '#f3f4f6', minHeight: '100vh' }}>
+        <h3 style={{ color: '#ef4444' }}>⚠️ No se pudo inicializar la aplicación</h3>
+        <p style={{ color: '#4b5563', fontSize: '13px' }}>{errorInicial}</p>
+        <button
+          onClick={verificarSesion}
+          style={{ padding: '8px 16px', background: '#111827', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          Reintentar
+        </button>
       </div>
     );
   }
