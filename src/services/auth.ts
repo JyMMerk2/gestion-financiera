@@ -1,4 +1,4 @@
-  import { supabase } from './supabase';
+import { supabase } from './supabase';
 
 function generarCodigoInvitacion(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -70,14 +70,24 @@ export async function cerrarSesion() {
 }
 
 export async function obtenerPerfilUsuario() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
 
-  const { data: perfil } = await supabase
-    .from('perfiles')
-    .select('*, familias(nombre, codigo_invitacion)')
-    .eq('id', user.id)
-    .single();
+    const { data: perfil, error } = await supabase
+      .from('perfiles')
+      .select('*, familias(nombre, codigo_invitacion)')
+      .eq('id', user.id)
+      .single();
 
-  return perfil;
+    if (error) {
+      console.warn('Error consultando el perfil:', error.message);
+      return null;
+    }
+
+    return perfil;
+  } catch (err) {
+    console.error('Error al verificar sesión:', err);
+    return null;
+  }
 }
