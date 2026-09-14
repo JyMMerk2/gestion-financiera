@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   LayoutDashboard, 
   PieChart, 
@@ -12,30 +12,23 @@ import {
 } from 'lucide-react';
 import { cerrarSesion } from '../services/auth';
 
-interface NavigationProps {
+export interface NavigationProps {
   vistaActual: string;
   setVistaActual: (vista: any) => void;
   onLogout: () => void;
+  modoOscuro: boolean;
+  setModoOscuro: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaActual, onLogout }) => {
-  const [modoOscuro, setModoOscuro] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
-  });
+export const Navigation: React.FC<NavigationProps> = ({ 
+  vistaActual, 
+  setVistaActual, 
+  onLogout,
+  modoOscuro,
+  setModoOscuro
+}) => {
 
-  useEffect(() => {
-    if (modoOscuro) {
-      document.body.style.backgroundColor = '#0b0f19';
-      document.body.style.color = '#f1f5f9';
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.style.backgroundColor = '#f8fafc';
-      document.body.style.color = '#0f172a';
-      localStorage.setItem('theme', 'light');
-    }
-  }, [modoOscuro]);
-
-  const toggleTema = () => setModoOscuro(!modoOscuro);
+  const toggleTema = () => setModoOscuro(prev => !prev);
 
   const menuItems = [
     { id: 'dashboard', nombre: 'Dashboard', icon: LayoutDashboard },
@@ -70,7 +63,6 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
         {/* LOGO + NAVEGACIÓN PRINCIPAL */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           
-          {/* Nombre de la App */}
           <div style={{ 
             fontSize: '15px', 
             fontWeight: '900', 
@@ -81,7 +73,6 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
             Gestión Financiera
           </div>
 
-          {/* Menú de Botones Modernos */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {menuItems.map((item) => {
               const Icono = item.icon;
@@ -127,7 +118,6 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
         {/* ACCIONES DE LA DERECHA */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           
-          {/* Toggle Modo Oscuro */}
           <button
             onClick={toggleTema}
             title={modoOscuro ? 'Modo Claro' : 'Modo Oscuro'}
@@ -148,7 +138,6 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
             {modoOscuro ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
-          {/* Botón Configuración */}
           <button
             onClick={() => setVistaActual('configuracion')}
             title="Configuración"
@@ -177,7 +166,6 @@ export const Navigation: React.FC<NavigationProps> = ({ vistaActual, setVistaAct
 
           <div style={{ width: '1px', height: '20px', background: borderColor, margin: '0 4px' }} />
 
-          {/* Botón Cerrar Sesión */}
           <button
             onClick={async () => {
               await cerrarSesion();
