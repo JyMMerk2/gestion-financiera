@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { TransaccionPresupuesto, FondoAhorro, RegistroPatrimonio, RegistroPrestamo } from '../types';
+import { TransaccionPresupuesto, RegistroPatrimonio, RegistroPrestamo } from '../types';
 
 interface DashboardProps {
   perfil: any;
@@ -8,7 +8,7 @@ interface DashboardProps {
   onNavigate: (seccion: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNavigate }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout }) => {
   const [modoPrivacidad, setModoPrivacidad] = useState(false);
   const [mesSeleccionado, setMesSeleccionado] = useState(() => {
     const now = new Date();
@@ -20,7 +20,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
   const [ahorroMes, setAhorroMes] = useState(0);
 
   const [deudasTotales, setDeudasTotales] = useState(0);
-  const [accionesTotales, setAccionesTotales] = useState(0);
   const [patrimonioNeto, setPatrimonioNeto] = useState(0);
   const [disponibleReal, setDisponibleReal] = useState(0);
 
@@ -45,7 +44,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
     if (!perfil?.familia_id) return;
 
     const cargarMetricas = async () => {
-      // 1. Presupuesto
       const { data: presData } = await supabase
         .from('presupuesto')
         .select('*')
@@ -74,7 +72,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
       setWalletsBalances(wallets);
       setUltimasTransacciones(ultimas.slice(-5).reverse());
 
-      // 2. Préstamos / Deudas
       const { data: prestData } = await supabase
         .from('prestamos')
         .select('*')
@@ -89,7 +86,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
       }
       setDeudasTotales(deudas);
 
-      // 3. Patrimonio
       const { data: patData } = await supabase
         .from('patrimonio')
         .select('*')
@@ -107,7 +103,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
 
     cargarMetricas();
 
-    // Sincronización en Tiempo Real con Supabase Realtime
     const channel = supabase
       .channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public' }, () => cargarMetricas())
@@ -122,7 +117,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
 
   return (
     <div style={{ paddingBottom: '30px' }}>
-      {/* Controles del encabezado */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
@@ -157,7 +151,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
         </div>
       </div>
 
-      {/* KPI Principal */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', background: '#fff', borderRadius: '18px', padding: '20px', border: '1px solid #e5e7eb', marginBottom: '20px' }}>
         <div>
           <div style={{ fontSize: '10px', fontWeight: '800', color: '#6b7280' }}>📈 INGRESOS</div>
@@ -173,7 +166,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
         </div>
       </div>
 
-      {/* Últimas Transacciones */}
       <div style={{ background: '#fff', borderRadius: '18px', padding: '20px', border: '1px solid #e5e7eb', marginBottom: '20px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '12px', color: '#111827' }}>Últimas transacciones del mes</div>
         {ultimasTransacciones.length === 0 ? (
@@ -197,7 +189,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
         )}
       </div>
 
-      {/* Métricas Adicionales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px' }}>
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '14px', borderLeft: '4px solid #f59e0b' }}>
           <div style={{ fontSize: '9px', fontWeight: '800', color: '#6b7280' }}>DEUDAS PENDIENTES</div>
@@ -213,7 +204,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, onNaviga
         </div>
       </div>
 
-      {/* Wallets */}
       <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '10px', color: '#111827' }}>💳 BALANCE POR CUENTAS / WALLETS</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
         {Object.keys(walletsBalances).map((wKey) => (
