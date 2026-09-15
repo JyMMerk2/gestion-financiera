@@ -84,32 +84,41 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
   };
 
   return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
+    <div className="transition-colors duration-300">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-3.5">
+        
         {/* Formulario */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', color: '#f8fafc' }}>
-          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: '1px solid #334155', paddingBottom: '6px', color: '#38bdf8' }}>
+        <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 text-slate-800 dark:text-slate-100 shadow-sm backdrop-blur-md transition-colors">
+          <div className="text-[11px] font-extrabold uppercase mb-3 border-b border-slate-200 dark:border-slate-700/80 pb-1.5 text-emerald-600 dark:text-emerald-400">
             ✍️ Registrar Ingreso o Gasto
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: '#94a3b8', marginBottom: '3px' }}>Tipo</label>
-                <select value={tipo} onChange={e => setTipo(e.target.value as TipoTransaccion)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', outline: 'none' }}>
+                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Tipo</label>
+                <select 
+                  value={tipo} 
+                  onChange={e => setTipo(e.target.value as TipoTransaccion)} 
+                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
+                >
                   <option value="Ingreso">Ingreso (+)</option>
                   <option value="Gasto">Gasto (-)</option>
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: '#94a3b8', marginBottom: '3px' }}>Moneda</label>
-                <select value={moneda} onChange={e => {
-                  const m = e.target.value as any;
-                  setMoneda(m);
-                  if (m === 'USD') setTasaCambio('57.75');
-                  else if (m === 'EUR') setTasaCambio('68.48');
-                  else setTasaCambio('1');
-                }} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', outline: 'none' }}>
+                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Moneda</label>
+                <select 
+                  value={moneda} 
+                  onChange={e => {
+                    const m = e.target.value as any;
+                    setMoneda(m);
+                    if (m === 'USD') setTasaCambio('57.75');
+                    else if (m === 'EUR') setTasaCambio('68.48');
+                    else setTasaCambio('1');
+                  }} 
+                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
+                >
                   <option value="DOP">DOP (RD$)</option>
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
@@ -117,23 +126,41 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: '#94a3b8', marginBottom: '3px' }}>Monto</label>
-                <input type="number" step="0.01" required value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', outline: 'none' }} />
+                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Monto</label>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  required 
+                  value={monto} 
+                  onChange={e => setMonto(e.target.value)} 
+                  placeholder="0.00" 
+                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500 placeholder-slate-400 dark:placeholder-slate-500" 
+                />
               </div>
               {moneda !== 'DOP' && (
                 <div>
-                  <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: '#94a3b8', marginBottom: '3px' }}>Tasa Cambio (RD$)</label>
-                  <input type="number" step="0.01" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', outline: 'none' }} />
+                  <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Tasa Cambio (RD$)</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    value={tasaCambio} 
+                    onChange={e => setTasaCambio(e.target.value)} 
+                    className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500" 
+                  />
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: '#94a3b8', marginBottom: '3px' }}>Wallet / Cuenta</label>
-                <select value={wallet} onChange={e => setWallet(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', outline: 'none' }}>
+                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Wallet / Cuenta</label>
+                <select 
+                  value={wallet} 
+                  onChange={e => setWallet(e.target.value)} 
+                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
+                >
                   <option value="💵 Efectivo">💵 Efectivo</option>
                   <option value="🏦 Banreservas">🏦 Banreservas</option>
                   <option value="🔵 Banco Popular">🔵 Banco Popular</option>
@@ -141,55 +168,81 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: '#94a3b8', marginBottom: '3px' }}>Categoría</label>
-                <input type="text" value={categoria} onChange={e => setCategoria(e.target.value)} placeholder="Ej. Supermercado, Sueldo..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', outline: 'none' }} />
+                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Categoría</label>
+                <input 
+                  type="text" 
+                  value={categoria} 
+                  onChange={e => setCategoria(e.target.value)} 
+                  placeholder="Ej. Supermercado, Sueldo..." 
+                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500 placeholder-slate-400 dark:placeholder-slate-500" 
+                />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: '#94a3b8', marginBottom: '3px' }}>Fecha</label>
-                <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', outline: 'none' }} />
+                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Fecha</label>
+                <input 
+                  type="date" 
+                  required 
+                  value={fecha} 
+                  onChange={e => setFecha(e.target.value)} 
+                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500" 
+                />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: '#94a3b8', marginBottom: '3px' }}>Concepto</label>
-                <input type="text" required value={concepto} onChange={e => setConcepto(e.target.value)} placeholder="Ej. Compra semanal..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', outline: 'none' }} />
+                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Concepto</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={concepto} 
+                  onChange={e => setConcepto(e.target.value)} 
+                  placeholder="Ej. Compra semanal..." 
+                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500 placeholder-slate-400 dark:placeholder-slate-500" 
+                />
               </div>
             </div>
 
-            <button type="submit" disabled={cargando} style={{ width: '100%', background: '#10b981', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
+            <button 
+              type="submit" 
+              disabled={cargando} 
+              className="w-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white p-2.5 rounded-lg font-extrabold text-[11px] uppercase cursor-pointer transition-colors mt-1"
+            >
               {cargando ? 'Guardando...' : 'Guardar Transacción'}
             </button>
           </form>
         </div>
 
         {/* Tabla Historial */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '16px', color: '#f8fafc' }}>
-          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: '1px solid #334155', paddingBottom: '6px', color: '#38bdf8' }}>
+        <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 text-slate-800 dark:text-slate-100 shadow-sm backdrop-blur-md transition-colors">
+          <div className="text-[11px] font-extrabold uppercase mb-3 border-b border-slate-200 dark:border-slate-700/80 pb-1.5 text-emerald-600 dark:text-emerald-400">
             📜 Historial Presupuesto
           </div>
-          <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+          <div className="max-h-[380px] overflow-y-auto">
+            <table className="w-full text-[11px] border-collapse">
               <thead>
-                <tr style={{ background: '#0f172a', textTransform: 'uppercase', borderBottom: '1px solid #334155', textAlign: 'left', color: '#94a3b8' }}>
-                  <th style={{ padding: '8px' }}>Fecha</th>
-                  <th style={{ padding: '8px' }}>Wallet</th>
-                  <th style={{ padding: '8px' }}>Tipo / Cat</th>
-                  <th style={{ padding: '8px' }}>Total RD$</th>
-                  <th style={{ padding: '8px' }}>Acción</th>
+                <tr className="bg-slate-100 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700 text-left">
+                  <th className="p-2">Fecha</th>
+                  <th className="p-2">Wallet</th>
+                  <th className="p-2">Tipo / Cat</th>
+                  <th className="p-2">Total RD$</th>
+                  <th className="p-2">Acción</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/60">
                 {transacciones.map((row) => (
-                  <tr key={row.id} style={{ borderBottom: '1px solid #334155' }}>
-                    <td style={{ padding: '8px', color: '#cbd5e1' }}>{row.fecha}</td>
-                    <td style={{ padding: '8px', color: '#f8fafc' }}><b>{row.wallet}</b></td>
-                    <td style={{ padding: '8px', color: '#cbd5e1' }}>{row.tipo} / {row.categoria}</td>
-                    <td style={{ padding: '8px', color: row.tipo === 'Ingreso' ? '#34d399' : '#f87171', fontWeight: 'bold' }}>
+                  <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td className="p-2 text-slate-600 dark:text-slate-300">{row.fecha}</td>
+                    <td className="p-2 font-bold text-slate-800 dark:text-slate-100">{row.wallet}</td>
+                    <td className="p-2 text-slate-600 dark:text-slate-300">{row.tipo} / {row.categoria}</td>
+                    <td className={`p-2 font-bold ${row.tipo === 'Ingreso' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                       RD$ {Number(row.monto_dop).toFixed(2)}
                     </td>
-                    <td style={{ padding: '8px' }}>
-                      <button onClick={() => eliminarRegistro(row.id!)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>
+                    <td className="p-2">
+                      <button 
+                        onClick={() => eliminarRegistro(row.id!)} 
+                        className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] cursor-pointer transition-colors"
+                      >
                         🗑️
                       </button>
                     </td>
@@ -199,6 +252,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
             </table>
           </div>
         </div>
+
       </div>
     </div>
   );
