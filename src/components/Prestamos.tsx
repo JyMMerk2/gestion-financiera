@@ -80,6 +80,18 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   const textPrimary = esOscuro ? '#f8fafc' : '#1e293b';
   const textLabel = esOscuro ? '#94a3b8' : '#6b7280';
   const bgInput = esOscuro ? '#0f172a' : '#f9fafb';
+  const borderInput = esOscuro ? '#475569' : '#d1d5db';
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '9px',
+    borderRadius: '8px',
+    border: `1px solid ${borderInput}`,
+    background: bgInput,
+    color: textPrimary,
+    outline: 'none',
+    boxSizing: 'border-box'
+  };
 
   return (
     <div>
@@ -94,37 +106,37 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Institución / Prestamista</label>
-              <input type="text" required value={entidad} onChange={e => setEntidad(e.target.value)} placeholder="Ej. Banco Popular, BHD, Amigo..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+              <input type="text" required value={entidad} onChange={e => setEntidad(e.target.value)} placeholder="Ej. Banco Popular, BHD, Amigo..." style={inputStyle} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo Movimiento</label>
-                <select value={tipo} onChange={e => setTipo(e.target.value as any)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }}>
-                  <option value="Pago Cuota">Pago Cuota / Abono (-)</option>
-                  <option value="Nueva Deuda">Nueva Deuda / Desembolso (+)</option>
+                <select value={tipo} onChange={e => setTipo(e.target.value as any)} style={inputStyle}>
+                  <option value="Pago Cuota" style={{ background: bgCard, color: textPrimary }}>Pago Cuota / Abono (-)</option>
+                  <option value="Nueva Deuda" style={{ background: bgCard, color: textPrimary }}>Nueva Deuda / Desembolso (+)</option>
                 </select>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Cuenta</label>
-                <input type="text" value={wallet} onChange={e => setWallet(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+                <input type="text" value={wallet} onChange={e => setWallet(e.target.value)} style={inputStyle} />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto (RD$)</label>
-                <input type="number" step="0.01" required value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+                <input type="number" step="0.01" required value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" style={inputStyle} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Fecha</label>
-                <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+                <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
               </div>
             </div>
 
             <div style={{ marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Notas / Detalles</label>
-              <input type="text" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej. Cuota #3 cancelada..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+              <input type="text" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej. Cuota #3 cancelada..." style={inputStyle} />
             </div>
 
             <button type="submit" disabled={cargando} style={{ width: '100%', background: '#f59e0b', color: '#000', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
@@ -174,5 +186,3 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     </div>
   );
 };
-
-export default Prestamos;
