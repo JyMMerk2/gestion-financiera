@@ -19,6 +19,16 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
 
   const [transacciones, setTransacciones] = useState<TransaccionPresupuesto[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [esOscuro, setEsOscuro] = useState(() => document.documentElement.classList.contains('dark'));
+
+  // Escuchar cambios en la clase 'dark' del HTML para alternar colores
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setEsOscuro(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   const cargarTransacciones = async () => {
     if (!familiaId) return;
@@ -83,42 +93,42 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
     cargarTransacciones();
   };
 
+  // Variables de color dinámicas segun el tema
+  const bgCard = esOscuro ? '#1e293b' : '#ffffff';
+  const borderCard = esOscuro ? '#334155' : '#e5e7eb';
+  const textTitle = esOscuro ? '#38bdf8' : '#0369a1';
+  const textPrimary = esOscuro ? '#f8fafc' : '#1e293b';
+  const textLabel = esOscuro ? '#94a3b8' : '#6b7280';
+  const bgInput = esOscuro ? '#0f172a' : '#f9fafb';
+  const bgHeader = esOscuro ? '#0f172a' : '#f9fafb';
+
   return (
-    <div className="transition-colors duration-300">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-3.5">
-        
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
         {/* Formulario */}
-        <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 text-slate-800 dark:text-slate-100 shadow-sm backdrop-blur-md transition-colors">
-          <div className="text-[11px] font-extrabold uppercase mb-3 border-b border-slate-200 dark:border-slate-700/80 pb-1.5 text-emerald-600 dark:text-emerald-400">
+        <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
             ✍️ Registrar Ingreso o Gasto
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
-                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Tipo</label>
-                <select 
-                  value={tipo} 
-                  onChange={e => setTipo(e.target.value as TipoTransaccion)} 
-                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
-                >
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo</label>
+                <select value={tipo} onChange={e => setTipo(e.target.value as TipoTransaccion)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary }}>
                   <option value="Ingreso">Ingreso (+)</option>
                   <option value="Gasto">Gasto (-)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Moneda</label>
-                <select 
-                  value={moneda} 
-                  onChange={e => {
-                    const m = e.target.value as any;
-                    setMoneda(m);
-                    if (m === 'USD') setTasaCambio('57.75');
-                    else if (m === 'EUR') setTasaCambio('68.48');
-                    else setTasaCambio('1');
-                  }} 
-                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
-                >
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Moneda</label>
+                <select value={moneda} onChange={e => {
+                  const m = e.target.value as any;
+                  setMoneda(m);
+                  if (m === 'USD') setTasaCambio('57.75');
+                  else if (m === 'EUR') setTasaCambio('68.48');
+                  else setTasaCambio('1');
+                }} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary }}>
                   <option value="DOP">DOP (RD$)</option>
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
@@ -126,41 +136,23 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
-                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Monto</label>
-                <input 
-                  type="number" 
-                  step="0.01" 
-                  required 
-                  value={monto} 
-                  onChange={e => setMonto(e.target.value)} 
-                  placeholder="0.00" 
-                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500 placeholder-slate-400 dark:placeholder-slate-500" 
-                />
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto</label>
+                <input type="number" step="0.01" required value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary }} />
               </div>
               {moneda !== 'DOP' && (
                 <div>
-                  <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Tasa Cambio (RD$)</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    value={tasaCambio} 
-                    onChange={e => setTasaCambio(e.target.value)} 
-                    className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500" 
-                  />
+                  <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tasa Cambio (RD$)</label>
+                  <input type="number" step="0.01" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary }} />
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
-                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Wallet / Cuenta</label>
-                <select 
-                  value={wallet} 
-                  onChange={e => setWallet(e.target.value)} 
-                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500"
-                >
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Cuenta</label>
+                <select value={wallet} onChange={e => setWallet(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary }}>
                   <option value="💵 Efectivo">💵 Efectivo</option>
                   <option value="🏦 Banreservas">🏦 Banreservas</option>
                   <option value="🔵 Banco Popular">🔵 Banco Popular</option>
@@ -168,81 +160,55 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Categoría</label>
-                <input 
-                  type="text" 
-                  value={categoria} 
-                  onChange={e => setCategoria(e.target.value)} 
-                  placeholder="Ej. Supermercado, Sueldo..." 
-                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500 placeholder-slate-400 dark:placeholder-slate-500" 
-                />
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Categoría</label>
+                <input type="text" value={categoria} onChange={e => setCategoria(e.target.value)} placeholder="Ej. Supermercado, Sueldo..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary }} />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
-                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Fecha</label>
-                <input 
-                  type="date" 
-                  required 
-                  value={fecha} 
-                  onChange={e => setFecha(e.target.value)} 
-                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500" 
-                />
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Fecha</label>
+                <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary }} />
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">Concepto</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={concepto} 
-                  onChange={e => setConcepto(e.target.value)} 
-                  placeholder="Ej. Compra semanal..." 
-                  className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500 placeholder-slate-400 dark:placeholder-slate-500" 
-                />
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Concepto</label>
+                <input type="text" required value={concepto} onChange={e => setConcepto(e.target.value)} placeholder="Ej. Compra semanal..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary }} />
               </div>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={cargando} 
-              className="w-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white p-2.5 rounded-lg font-extrabold text-[11px] uppercase cursor-pointer transition-colors mt-1"
-            >
+            <button type="submit" disabled={cargando} style={{ width: '100%', background: esOscuro ? '#10b981' : '#059669', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
               {cargando ? 'Guardando...' : 'Guardar Transacción'}
             </button>
           </form>
         </div>
 
         {/* Tabla Historial */}
-        <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl p-4 text-slate-800 dark:text-slate-100 shadow-sm backdrop-blur-md transition-colors">
-          <div className="text-[11px] font-extrabold uppercase mb-3 border-b border-slate-200 dark:border-slate-700/80 pb-1.5 text-emerald-600 dark:text-emerald-400">
+        <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
             📜 Historial Presupuesto
           </div>
-          <div className="max-h-[380px] overflow-y-auto">
-            <table className="w-full text-[11px] border-collapse">
+          <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
               <thead>
-                <tr className="bg-slate-100 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700 text-left">
-                  <th className="p-2">Fecha</th>
-                  <th className="p-2">Wallet</th>
-                  <th className="p-2">Tipo / Cat</th>
-                  <th className="p-2">Total RD$</th>
-                  <th className="p-2">Acción</th>
+                <tr style={{ background: bgHeader, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
+                  <th style={{ padding: '8px' }}>Fecha</th>
+                  <th style={{ padding: '8px' }}>Wallet</th>
+                  <th style={{ padding: '8px' }}>Tipo / Cat</th>
+                  <th style={{ padding: '8px' }}>Total RD$</th>
+                  <th style={{ padding: '8px' }}>Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/60">
+              <tbody>
                 {transacciones.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="p-2 text-slate-600 dark:text-slate-300">{row.fecha}</td>
-                    <td className="p-2 font-bold text-slate-800 dark:text-slate-100">{row.wallet}</td>
-                    <td className="p-2 text-slate-600 dark:text-slate-300">{row.tipo} / {row.categoria}</td>
-                    <td className={`p-2 font-bold ${row.tipo === 'Ingreso' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
+                    <td style={{ padding: '8px' }}>{row.fecha}</td>
+                    <td style={{ padding: '8px' }}><b>{row.wallet}</b></td>
+                    <td style={{ padding: '8px' }}>{row.tipo} / {row.categoria}</td>
+                    <td style={{ padding: '8px', color: row.tipo === 'Ingreso' ? (esOscuro ? '#34d399' : '#059669') : (esOscuro ? '#f87171' : '#dc2626'), fontWeight: 'bold' }}>
                       RD$ {Number(row.monto_dop).toFixed(2)}
                     </td>
-                    <td className="p-2">
-                      <button 
-                        onClick={() => eliminarRegistro(row.id!)} 
-                        className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] cursor-pointer transition-colors"
-                      >
+                    <td style={{ padding: '8px' }}>
+                      <button onClick={() => eliminarRegistro(row.id!)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>
                         🗑️
                       </button>
                     </td>
@@ -252,7 +218,6 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
             </table>
           </div>
         </div>
-
       </div>
     </div>
   );
