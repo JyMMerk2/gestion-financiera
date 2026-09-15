@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { RegistroPrestamo } from '../types';
+import { useModoOscuro } from '../hook/useModoOscuro'; // 👈 Ruta corregida a '../hook/'
 
 interface PrestamosProps {
   familiaId: string;
 }
 
 export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
+  // Importamos las variables automáticas de modo oscuro/claro desde tu hook
+  const { bgCard, borderCard, textPrimary, textLabel, inputStyle, esOscuro } = useModoOscuro();
+
   const [entidad, setEntidad] = useState('');
   const [tipo, setTipo] = useState<'Pago Cuota' | 'Nueva Deuda'>('Pago Cuota');
   const [monto, setMonto] = useState('');
@@ -16,15 +20,6 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
   const [prestamosList, setPrestamosList] = useState<RegistroPrestamo[]>([]);
   const [cargando, setCargando] = useState(false);
-  const [esOscuro, setEsOscuro] = useState(() => document.documentElement.classList.contains('dark'));
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setEsOscuro(document.documentElement.classList.contains('dark'));
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
 
   const cargarPrestamos = async () => {
     if (!familiaId) return;
@@ -74,24 +69,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     cargarPrestamos();
   };
 
-  const bgCard = esOscuro ? '#1e293b' : '#ffffff';
-  const borderCard = esOscuro ? '#334155' : '#e5e7eb';
   const textTitle = esOscuro ? '#fbbf24' : '#d97706';
-  const textPrimary = esOscuro ? '#f8fafc' : '#1e293b';
-  const textLabel = esOscuro ? '#94a3b8' : '#6b7280';
-  const bgInput = esOscuro ? '#0f172a' : '#f9fafb';
-  const borderInput = esOscuro ? '#475569' : '#d1d5db';
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '9px',
-    borderRadius: '8px',
-    border: `1px solid ${borderInput}`,
-    background: bgInput,
-    color: textPrimary,
-    outline: 'none',
-    boxSizing: 'border-box'
-  };
 
   return (
     <div>
@@ -153,7 +131,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
           <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
               <thead>
-                <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
+                <tr style={{ background: inputStyle.background as string, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
                   <th style={{ padding: '8px' }}>Fecha</th>
                   <th style={{ padding: '8px' }}>Institución</th>
                   <th style={{ padding: '8px' }}>Tipo</th>
@@ -186,3 +164,5 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     </div>
   );
 };
+
+export default Prestamos;
