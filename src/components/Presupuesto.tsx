@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { TransaccionPresupuesto, TipoTransaccion } from '../types';
+import { useModoOscuro } from '../hooks/useModoOscuro';
 
 interface PresupuestoProps {
   familiaId: string;
@@ -8,6 +9,8 @@ interface PresupuestoProps {
 }
 
 export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccionado }) => {
+  const { bgCard, borderCard, textPrimary, textLabel, inputStyle, esOscuro } = useModoOscuro();
+
   const [tipo, setTipo] = useState<TipoTransaccion>('Gasto');
   const [categoria, setCategoria] = useState('');
   const [concepto, setConcepto] = useState('');
@@ -19,15 +22,6 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
 
   const [transacciones, setTransacciones] = useState<TransaccionPresupuesto[]>([]);
   const [cargando, setCargando] = useState(false);
-  const [esOscuro, setEsOscuro] = useState(() => document.documentElement.classList.contains('dark'));
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setEsOscuro(document.documentElement.classList.contains('dark'));
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
 
   const cargarTransacciones = async () => {
     if (!familiaId) return;
@@ -92,12 +86,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
     cargarTransacciones();
   };
 
-  const bgCard = esOscuro ? '#1e293b' : '#ffffff';
-  const borderCard = esOscuro ? '#334155' : '#e5e7eb';
   const textTitle = esOscuro ? '#38bdf8' : '#0284c7';
-  const textPrimary = esOscuro ? '#f8fafc' : '#1e293b';
-  const textLabel = esOscuro ? '#94a3b8' : '#6b7280';
-  const bgInput = esOscuro ? '#0f172a' : '#f9fafb';
 
   return (
     <div>
@@ -113,9 +102,9 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo</label>
-                <select value={tipo} onChange={e => setTipo(e.target.value as TipoTransaccion)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }}>
-                  <option value="Ingreso">Ingreso (+)</option>
-                  <option value="Gasto">Gasto (-)</option>
+                <select value={tipo} onChange={e => setTipo(e.target.value as TipoTransaccion)} style={inputStyle}>
+                  <option value="Ingreso" style={{ background: bgCard, color: textPrimary }}>Ingreso (+)</option>
+                  <option value="Gasto" style={{ background: bgCard, color: textPrimary }}>Gasto (-)</option>
                 </select>
               </div>
               <div>
@@ -126,10 +115,10 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
                   if (m === 'USD') setTasaCambio('57.75');
                   else if (m === 'EUR') setTasaCambio('68.48');
                   else setTasaCambio('1');
-                }} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }}>
-                  <option value="DOP">DOP (RD$)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
+                }} style={inputStyle}>
+                  <option value="DOP" style={{ background: bgCard, color: textPrimary }}>DOP (RD$)</option>
+                  <option value="USD" style={{ background: bgCard, color: textPrimary }}>USD ($)</option>
+                  <option value="EUR" style={{ background: bgCard, color: textPrimary }}>EUR (€)</option>
                 </select>
               </div>
             </div>
@@ -137,12 +126,12 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto</label>
-                <input type="number" step="0.01" required value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+                <input type="number" step="0.01" required value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" style={inputStyle} />
               </div>
               {moneda !== 'DOP' && (
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tasa Cambio (RD$)</label>
-                  <input type="number" step="0.01" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+                  <input type="number" step="0.01" value={tasaCambio} onChange={e => setTasaCambio(e.target.value)} style={inputStyle} />
                 </div>
               )}
             </div>
@@ -150,27 +139,27 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Cuenta</label>
-                <select value={wallet} onChange={e => setWallet(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }}>
-                  <option value="💵 Efectivo">💵 Efectivo</option>
-                  <option value="🏦 Banreservas">🏦 Banreservas</option>
-                  <option value="🔵 Banco Popular">🔵 Banco Popular</option>
-                  <option value="🏢 Banco BHD">🏢 Banco BHD</option>
+                <select value={wallet} onChange={e => setWallet(e.target.value)} style={inputStyle}>
+                  <option value="💵 Efectivo" style={{ background: bgCard, color: textPrimary }}>💵 Efectivo</option>
+                  <option value="🏦 Banreservas" style={{ background: bgCard, color: textPrimary }}>🏦 Banreservas</option>
+                  <option value="🔵 Banco Popular" style={{ background: bgCard, color: textPrimary }}>🔵 Banco Popular</option>
+                  <option value="🏢 Banco BHD" style={{ background: bgCard, color: textPrimary }}>🏢 Banco BHD</option>
                 </select>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Categoría</label>
-                <input type="text" value={categoria} onChange={e => setCategoria(e.target.value)} placeholder="Ej. Supermercado, Sueldo..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+                <input type="text" value={categoria} onChange={e => setCategoria(e.target.value)} placeholder="Ej. Supermercado, Sueldo..." style={inputStyle} />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Fecha</label>
-                <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+                <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Concepto</label>
-                <input type="text" required value={concepto} onChange={e => setConcepto(e.target.value)} placeholder="Ej. Compra semanal..." style={{ width: '100%', padding: '9px', borderRadius: '8px', border: `1px solid ${borderCard}`, background: bgInput, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
+                <input type="text" required value={concepto} onChange={e => setConcepto(e.target.value)} placeholder="Ej. Compra semanal..." style={inputStyle} />
               </div>
             </div>
 
@@ -180,7 +169,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
           </form>
         </div>
 
-        {/* Tabla Historial */}
+        {/* Historial */}
         <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
           <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
             📜 Historial Presupuesto
@@ -188,7 +177,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
           <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
               <thead>
-                <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
+                <tr style={{ background: inputStyle.background as string, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
                   <th style={{ padding: '8px' }}>Fecha</th>
                   <th style={{ padding: '8px' }}>Wallet</th>
                   <th style={{ padding: '8px' }}>Tipo / Cat</th>
