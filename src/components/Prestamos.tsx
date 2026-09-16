@@ -8,20 +8,6 @@ interface PrestamosProps {
   familiaId: string;
 }
 
-interface ItemPrestamo {
-  id?: string;
-  familia_id: string;
-  acreedor: string;
-  tipo: 'Por Pagar' | 'Por Cobrar';
-  monto_original: number;
-  balance_pendiente: number;
-  cuotas_totales: number;
-  cuotas_pagadas: number;
-  monto_atraso: number;
-  wallet: string;
-  estado: string;
-}
-
 export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
 
@@ -32,9 +18,9 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   const [cuotasTotales, setCuotasTotales] = useState('12');
   const [cuotasPagadas, setCuotasPagadas] = useState('0');
   const [montoAtraso, setMontoAtraso] = useState('0');
-  const [wallet, setWallet] = useState('Efectivo');
+  const [wallet, setWallet] = useState('');
 
-  const [prestamos, setPrestamos] = useState<ItemPrestamo[]>([]);
+  const [prestamos, setPrestamos] = useState<any[]>([]);
   const [walletsDinamicas, setWalletsDinamicas] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
 
@@ -104,15 +90,20 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     }
   };
 
-  const abonarCuota = async (item: ItemPrestamo) => {
-    const valorCuotaStr = prompt(`Ingresa el monto a abonar/pagar a ${item.acreedor}:`);
+  const abonarCuota = async (item: any) => {
+    const listaNombres = walletsDinamicas.map(w => w.nombre).join(', ');
+    const walletPago = prompt(`¿Desde cuál Wallet realizarás el pago? (${listaNombres || 'Efectivo'}):`, wallet || 'Efectivo');
+    if (!walletPago) return;
+
+    const valorCuotaStr = prompt(`Ingresa el monto a pagar para ${item.acreedor}:`);
     if (!valorCuotaStr || isNaN(Number(valorCuotaStr))) return;
 
     const valorAbono = Number(valorCuotaStr);
     const nuevoBalance = Math.max(0, item.balance_pendiente - valorAbono);
-    const nuevasCuotas = item.cuotas_pagadas + 1;
-    const nuevoAtraso = Math.max(0, item.monto_atraso - valorAbono);
+    const nuevasCuotas = Number(item.cuotas_pagadas) + 1;
+    const nuevoAtraso = Math.max(0, Number(item.monto_atraso) - valorAbono);
 
+    // 1. Actualizar préstamo
     await supabase.from('prestamos').update({
       balance_pendiente: nuevoBalance,
       cuotas_pagadas: nuevasCuotas,
@@ -120,6 +111,21 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
       estado: nuevoBalance === 0 ? 'Liquidado' : 'Activo'
     }).eq('id', item.id);
 
+    // 2. Descontar en Presupuesto como Gasto
+    await supabase.from('presupuesto').insert([{
+      familia_id: familiaId,
+      fecha: new Date().toISOString().split('T')[0],
+      tipo: 'Gasto',
+      categoria: 'Préstamos / Deudas',
+      concepto: `Pago cuota a ${item.acreedor}`,
+      monto_dop: valorAbono,
+      monto_original: valorAbono,
+      moneda: 'DOP',
+      tasa_cambio: 1,
+      wallet: walletPago.trim()
+    }]);
+
+    alert(`¡Pago registrado exitosamente desde la cuenta ${walletPago}!`);
     cargarPrestamos();
   };
 
@@ -131,7 +137,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
   const totalAtrasos = prestamos
     .filter(p => p.tipo === 'Por Pagar')
-    .reduce((acc, curr) => acc + Number(curr.monto_atraso), 0);
+    .reduce((acc, curr) => acc + Number(curr.monto_atraso || 0), 0);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
@@ -154,7 +160,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Banco / Entidad / Persona</label>
-                <input type="text" required value={acreedor} onChange={e => setAcreedor(e.target.value)} placeholder="Ej. Banco BHD, Juan Pérez..." style={inputStyle} />
+                <input type="text" required value={acreedor} onChange={e => setAcreedor(e.target.value)} placeholder="Ej. Banreservas, Cooperativa..." style={inputStyle} />
               </div>
             </div>
 
@@ -171,7 +177,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Cuenta</label>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet Deuda</label>
                 <select value={wallet} onChange={e => setWallet(e.target.value)} style={inputStyle}>
                   {walletsDinamicas.length === 0 ? (
                     <option value="Efectivo">Efectivo</option>
@@ -203,7 +209,6 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
           </form>
         </div>
 
-        {/* Creador/Administrador de Wallets */}
         <WalletsManager familiaId={familiaId} onWalletCambio={cargarWallets} />
       </div>
 
@@ -252,7 +257,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                   {p.balance_pendiente > 0 && (
                     <button onClick={() => abonarCuota(p)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Plus size={12} /> Registrar Pago
+                      <Plus size={12} /> Pagar Cuota
                     </button>
                   )}
                   <button onClick={() => eliminarPrestamo(p.id!)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
