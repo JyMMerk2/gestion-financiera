@@ -187,7 +187,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     .reduce((acc, curr) => acc + Number(curr.monto_atraso || 0), 0);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
       
       {/* Formulario */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -234,7 +234,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
           {modoFormulario === 'registrar' ? (
             <form onSubmit={handleSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo de Registro</label>
                   <select value={tipo} onChange={e => setTipo(e.target.value as any)} style={inputStyle}>
@@ -248,7 +248,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto Inicial (RD$)</label>
                   <input type="number" step="0.01" required value={montoOriginal} onChange={e => setMontoOriginal(e.target.value)} placeholder="0.00" style={inputStyle} />
@@ -259,7 +259,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '6px', marginBottom: '8px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Cuenta</label>
                   <select value={wallet} onChange={e => setWallet(e.target.value)} style={inputStyle}>
@@ -278,7 +278,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto en Atraso (RD$)</label>
                   <input type="number" step="0.01" value={montoAtraso} onChange={e => setMontoAtraso(e.target.value)} style={{ ...inputStyle, color: Number(montoAtraso) > 0 ? '#ef4444' : textPrimary, fontWeight: 'bold' }} />
@@ -307,7 +307,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto del Pago / Cuota (RD$)</label>
                   <input type="number" step="0.01" required value={montoPago} onChange={e => setMontoPago(e.target.value)} placeholder="0.00" style={inputStyle} />
@@ -362,7 +362,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '10px', color: textLabel, marginBottom: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '8px', fontSize: '10px', color: textLabel, marginBottom: '8px' }}>
                   <div>Original: <b style={{ color: textPrimary }}>RD$ {Number(p.monto_original ?? p.monto ?? 0).toLocaleString()}</b></div>
                   <div>Pendiente: <b style={{ color: p.tipo === 'Por Pagar' || p.tipo === 'Deuda' ? '#ef4444' : '#10b981' }}>RD$ {Number(p.balance_pendiente ?? p.monto ?? 0).toLocaleString()}</b></div>
                   <div>Cuotas: <b>{p.cuotas_pagadas ?? 0} / {p.cuotas_totales ?? 1}</b></div>
