@@ -6,13 +6,14 @@ import { Presupuesto } from './components/Presupuesto';
 import { Ahorros } from './components/Ahorros';
 import { Patrimonio } from './components/Patrimonio';
 import Prestamos from './components/Prestamos';
+import Metas from './components/Metas';
 import { obtenerPerfilUsuario, cerrarSesion } from './services/auth';
 
 export default function App() {
   const [perfil, setPerfil] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
   const [errorInicial, setErrorInicial] = useState<string | null>(null);
-  const [seccionActual, setSeccionActual] = useState<'dashboard' | 'presupuesto' | 'ahorros' | 'patrimonio' | 'prestamos' | 'configuracion'>('dashboard');
+  const [seccionActual, setSeccionActual] = useState<'dashboard' | 'presupuesto' | 'ahorros' | 'patrimonio' | 'prestamos' | 'metas' | 'configuracion'>('dashboard');
 
   const [modoOscuro, setModoOscuro] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
@@ -20,10 +21,12 @@ export default function App() {
 
   useEffect(() => {
     if (modoOscuro) {
+      document.documentElement.classList.add('dark');
       document.body.style.backgroundColor = '#0b0f19';
       document.body.style.color = '#f1f5f9';
       localStorage.setItem('theme', 'dark');
     } else {
+      document.documentElement.classList.remove('dark');
       document.body.style.backgroundColor = '#f8fafc';
       document.body.style.color = '#0f172a';
       localStorage.setItem('theme', 'light');
@@ -135,6 +138,12 @@ export default function App() {
 
         {seccionActual === 'prestamos' && (
           <Prestamos
+            familiaId={perfil.familia_id}
+          />
+        )}
+
+        {seccionActual === 'metas' && (
+          <Metas
             familiaId={perfil.familia_id}
           />
         )}
