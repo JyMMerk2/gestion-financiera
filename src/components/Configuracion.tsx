@@ -5,9 +5,11 @@ import { useModoOscuro } from '../hooks/useModoOscuro';
 interface ConfiguracionProps {
   perfil: any;
   onPerfilActualizado: () => void;
+  moneda: 'RD$' | 'USD';
+  setMoneda: (moneda: 'RD$' | 'USD') => void;
 }
 
-export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilActualizado }) => {
+export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilActualizado, moneda, setMoneda }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle } = useModoOscuro();
 
   const [nombreFamilia, setNombreFamilia] = useState('');
@@ -57,6 +59,21 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         ⚙️ Configuración del Perfil y Grupo Familiar
       </h2>
 
+      {/* Selector de Moneda Global */}
+      <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
+        <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '6px' }}>
+          💱 Moneda Principal del Sistema
+        </label>
+        <select
+          value={moneda}
+          onChange={(e) => setMoneda(e.target.value as 'RD$' | 'USD')}
+          style={{ ...inputStyle, fontWeight: 'bold' }}
+        >
+          <option value="RD$">Dólares / Pesos (RD$)</option>
+          <option value="USD">Dólares Estadounidenses ($ USD)</option>
+        </select>
+      </div>
+
       {/* Datos Personales */}
       <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${borderCard}`, fontSize: '13px', color: textPrimary, display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <p><strong>Usuario:</strong> {perfil?.nombre_usuario || perfil?.email}</p>
@@ -92,9 +109,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
             placeholder="Ej. JYMMERK2-2026"
             style={inputStyle}
           />
-          <span style={{ fontSize: '10px', color: textLabel, marginTop: '4px', display: 'block' }}>
-            Este código permite que otros miembros se unan a tu grupo familiar.
-          </span>
         </div>
 
         <button
