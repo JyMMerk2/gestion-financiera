@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
-import { Copy, Share2, Check, RefreshCw } from 'lucide-react';
+import { Copy, Share2, Check, RefreshCw, KeyRound, User } from 'lucide-react';
 
 interface ConfiguracionProps {
   perfil: any;
@@ -13,6 +13,16 @@ interface ConfiguracionProps {
 export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilActualizado, moneda = 'RD$', setMoneda }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle } = useModoOscuro();
 
+  // Estados de Usuario / Perfil
+  const [nombreUsuario, setNombreUsuario] = useState('');
+  const [guardandoUsuario, setGuardandoUsuario] = useState(false);
+
+  // Estados de Seguridad / Contraseña
+  const [nuevaPassword, setNuevaPassword] = useState('');
+  const [confirmarPassword, setConfirmarPassword] = useState('');
+  const [guardandoPassword, setGuardandoPassword] = useState(false);
+
+  // Estados de Familia y Tasas
   const [nombreFamilia, setNombreFamilia] = useState('');
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
   const [tasaUsd, setTasaUsd] = useState('60.00');
@@ -23,11 +33,14 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
   // Carga los datos reales de Supabase en el estado local
   useEffect(() => {
-    if (perfil?.familias) {
-      setNombreFamilia(perfil.familias.nombre || '');
-      setCodigoInvitacion(perfil.familias.codigo_invitacion || '');
-      if (perfil.familias.tasa_usd) setTasaUsd(String(perfil.familias.tasa_usd));
-      if (perfil.familias.tasa_eur) setTasaEur(String(perfil.familias.tasa_eur));
+    if (perfil) {
+      setNombreUsuario(perfil.nombre_usuario || perfil.nombre || '');
+      if (perfil.familias) {
+        setNombreFamilia(perfil.familias.nombre || '');
+        setCodigoInvitacion(perfil.familias.codigo_invitacion || '');
+        if (perfil.familias.tasa_usd) setTasaUsd(String(perfil.familias.tasa_usd));
+        if (perfil.familias.tasa_eur) setTasaEur(String(perfil.familias.tasa_eur));
+      }
     }
   }, [perfil]);
 
@@ -59,6 +72,67 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   useEffect(() => {
     consultarTasasEnVivo();
   }, []);
+
+  const handleGuardarUsuario = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!perfil?.id) return;
+
+    setGuardandoUsuario(true);
+    try {
+      const { error } = await supabase
+        .from('perfiles')
+        .update({
+          nombre_usuario: nombreUsuario.trim(),
+          nombre: nombreUsuario.trim()
+        })
+        .eq('id', perfil.id);
+
+      if (error) {
+        alert('Error al actualizar nombre: ' + error.message);
+      } else {
+        alert('¡Nombre de usuario actualizado con éxito!');
+        onPerfilActualizado();
+      }
+    } catch (err: any) {
+      alert('Error inesperado: ' + err.message);
+    } finally {
+      setGuardandoUsuario(false);
+    }
+  };
+
+  const handleCambiarPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevaPassword) return;
+
+    if (nuevaPassword.length < 6) {
+      alert('La contraseña debe tener un mínimo de 6 caracteres.');
+      return;
+    }
+
+    if (nuevaPassword !== confirmarPassword) {
+      alert('Las contraseñas no coinciden.');
+      return;
+    }
+
+    setGuardandoPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: nuevaPassword
+      });
+
+      if (error) {
+        alert('Error al cambiar contraseña: ' + error.message);
+      } else {
+        alert('¡Contraseña actualizada correctamente!');
+        setNuevaPassword('');
+        setConfirmarPassword('');
+      }
+    } catch (err: any) {
+      alert('Error inesperado: ' + err.message);
+    } finally {
+      setGuardandoPassword(false);
+    }
+  };
 
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,14 +192,14 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   };
 
   return (
-    <div style={{ background: bgCard, padding: '24px', borderRadius: '16px', border: `1px solid ${borderCard}`, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: '600px', margin: '0 auto' }}>
-      <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: textTitle }}>
+    <div style={{ background: bgCard, padding: '24px', borderRadius: '16px', border: `1px solid ${borderCard}`, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: textTitle }}>
         ⚙️ Configuración del Perfil y Grupo Familiar
       </h2>
 
       {/* Selector de Moneda */}
       {setMoneda && (
-        <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
+        <div style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
           <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '6px' }}>
             💱 Moneda Principal del Sistema
           </label>
@@ -140,14 +214,90 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </div>
       )}
 
-      {/* Datos Personales */}
-      <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: `1px solid ${borderCard}`, fontSize: '13px', color: textPrimary, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <p><strong>Usuario:</strong> {perfil?.nombre_usuario || perfil?.email}</p>
-        <p><strong>Email:</strong> {perfil?.email}</p>
-        <p><strong>ID de Familia:</strong> <code style={{ background: borderCard, padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>{perfil?.familia_id || 'Sin ID'}</code></p>
-      </div>
+      {/* Bloque 1: Datos de Perfil y Nombre */}
+      <form onSubmit={handleGuardarUsuario} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
+        <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <User size={14} /> Mi Usuario
+        </div>
 
-      {/* Formulario de Grupo Familiar */}
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
+            Nombre de Usuario
+          </label>
+          <input
+            type="text"
+            required
+            value={nombreUsuario}
+            onChange={(e) => setNombreUsuario(e.target.value)}
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
+            Correo Electrónico
+          </label>
+          <input
+            type="email"
+            disabled
+            value={perfil?.email || ''}
+            style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={guardandoUsuario}
+          style={{ width: '100%', background: '#0284c7', color: '#fff', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
+        >
+          {guardandoUsuario ? 'Guardando...' : 'Actualizar Nombre'}
+        </button>
+      </form>
+
+      {/* Bloque 2: Cambiar Contraseña */}
+      <form onSubmit={handleCambiarPassword} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
+        <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <KeyRound size={14} /> Seguridades y Contraseña
+        </div>
+
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
+            Nueva Contraseña
+          </label>
+          <input
+            type="password"
+            required
+            value={nuevaPassword}
+            onChange={(e) => setNuevaPassword(e.target.value)}
+            placeholder="Mínimo 6 caracteres"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
+            Confirmar Nueva Contraseña
+          </label>
+          <input
+            type="password"
+            required
+            value={confirmarPassword}
+            onChange={(e) => setConfirmarPassword(e.target.value)}
+            placeholder="Repita la nueva contraseña"
+            style={inputStyle}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={guardandoPassword}
+          style={{ width: '100%', background: '#10b981', color: '#fff', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
+        >
+          {guardandoPassword ? 'Cambiando...' : 'Guardar Nueva Contraseña'}
+        </button>
+      </form>
+
+      {/* Bloque 3: Formulario de Grupo Familiar y Tasas */}
       <form onSubmit={handleGuardarFamilia}>
         <div style={{ marginBottom: '14px' }}>
           <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
