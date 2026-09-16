@@ -1,15 +1,33 @@
-:root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  color-scheme: light;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #f3f4f6;
-  color: #111827;
-}
-
+/* Responsive Global & Touch Optimization */
 * {
   box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden; /* Previene scroll horizontal no deseado */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tablas adaptables en pantallas pequeñas */
+table {
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Ajustes de tipografía e inputs para evitar zoom automático en iOS */
+input, select, textarea, button {
+  font-size: 14px !important;
+}
+
+@media (max-width: 768px) {
+  /* Scrollbar discreto en celulares */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
 }
