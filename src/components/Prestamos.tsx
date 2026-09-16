@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { WalletsManager } from './WalletsManager';
-import { AlertCircle, Trash2, Plus } from 'lucide-react';
+import { AlertCircle, Trash2 } from 'lucide-react';
 
 interface PrestamosProps {
   familiaId: string;
@@ -22,6 +22,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   const [cuotasPagadas, setCuotasPagadas] = useState('0');
   const [montoAtraso, setMontoAtraso] = useState('0');
   const [wallet, setWallet] = useState('');
+  const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Campos Pago
   const [prestamoSeleccionadoId, setPrestamoSeleccionadoId] = useState('');
@@ -88,6 +89,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
         familia_id: familiaId,
         acreedor: acreedor.trim(),
         tipo,
+        fecha: fecha || new Date().toISOString().split('T')[0],
         monto_original: orig,
         monto_dop: pend,
         balance_pendiente: pend,
@@ -271,9 +273,15 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '8px' }}>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto en Atraso (RD$)</label>
-                <input type="number" step="0.01" value={montoAtraso} onChange={e => setMontoAtraso(e.target.value)} style={{ ...inputStyle, color: Number(montoAtraso) > 0 ? '#ef4444' : textPrimary, fontWeight: 'bold' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto en Atraso (RD$)</label>
+                  <input type="number" step="0.01" value={montoAtraso} onChange={e => setMontoAtraso(e.target.value)} style={{ ...inputStyle, color: Number(montoAtraso) > 0 ? '#ef4444' : textPrimary, fontWeight: 'bold' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Fecha de Inicio / Registro</label>
+                  <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
+                </div>
               </div>
 
               <button type="submit" disabled={cargando} style={{ width: '100%', background: '#0284c7', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
