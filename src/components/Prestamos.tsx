@@ -1,22 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { RegistroPrestamo } from '../types';
 import { useModoOscuro } from '../hooks/useModoOscuro';
+import { AlertCircle, CheckCircle2, Trash2, Plus } from 'lucide-react';
 
 interface PrestamosProps {
   familiaId: string;
 }
 
+interface ItemPrestamo {
+  id?: string;
+  familia_id: string;
+  acreedor: string;
+  tipo: 'Por Pagar' | 'Por Cobrar';
+  monto_original: number;
+  balance_pendiente: number;
+  cuotas_totales: number;
+  cuotas_pagadas: number;
+  monto_atraso: number;
+  tasa_interes?: number;
+  estado: string;
+}
+
 export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
 
-  const [entidad, setEntidad] = useState('');
-  const [tipo, setTipo] = useState<'Pago Cuota' | 'Nueva Deuda'>('Pago Cuota');
-  const [monto, setMonto] = useState('');
-  const [wallet, setWallet] = useState('🏦 Banreservas');
-  const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
-  const [notas, setNotas] = useState('');
-  const [prestamosList, setPrestamosList] = useState<RegistroPrestamo[]>([]);
+  const [acreedor, setAcreedor] = useState('');
+  const [tipo, setTipo] = useState<'Por Pagar' | 'Por Cobrar'>('Por Pagar');
+  const [montoOriginal, setMontoOriginal] = useState('');
+  const [balancePendiente, setBalancePendiente] = useState('');
+  const [cuotasTotales, setCuotasTotales] = useState('12');
+  const [cuotasPagadas, setCuotasPagadas] = useState('0');
+  const [montoAtraso, setMontoAtraso] = useState('0');
+
+  const [prestamos, setPrestamos] = useState<ItemPrestamo[]>([]);
   const [cargando, setCargando] = useState(false);
 
   const cargarPrestamos = async () => {
@@ -25,9 +41,9 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
       .from('prestamos')
       .select('*')
       .eq('familia_id', familiaId)
-      .order('fecha', { ascending: false });
+      .order('created_at', { ascending: false });
 
-    if (data) setPrestamosList(data);
+    if (data) setPrestamos(data);
   };
 
   useEffect(() => {
@@ -36,24 +52,30 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!monto || Number(monto) <= 0) return;
+    if (!acreedor.trim() || !familiaId) return;
 
     setCargando(true);
     try {
+      const orig = Number(montoOriginal) || 0;
+      const pend = balancePendiente ? Number(balancePendiente) : orig;
+
       await supabase.from('prestamos').insert([{
         familia_id: familiaId,
-        fecha,
-        entidad,
+        acreedor: acreedor.trim(),
         tipo,
-        monto: Number(monto),
-        wallet,
-        notas
+        monto_original: orig,
+        balance_pendiente: pend,
+        cuotas_totales: Number(cuotasTotales) || 1,
+        cuotas_pagadas: Number(cuotasPagadas) || 0,
+        monto_atraso: Number(montoAtraso) || 0,
+        estado: 'Activo'
       }]);
 
-      setEntidad('');
-      setMonto('');
-      setNotas('');
-      cargarPrestamos();
+      setAcreedor('');
+      setMontoOriginal('');
+      setBalancePendiente('');
+      setMontoAtraso('0');
+      await cargarPrestamos();
     } catch (err: any) {
       alert('Error al guardar préstamo: ' + err.message);
     } finally {
@@ -61,98 +83,159 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     }
   };
 
+  const abonarCuota = async (item: ItemPrestamo) => {
+    const valorCuotaStr = prompt(`Ingresa el monto a abonar/pagar a ${item.acreedor}:`);
+    if (!valorCuotaStr || isNaN(Number(valorCuotaStr))) return;
+
+    const valorAbono = Number(valorCuotaStr);
+    const nuevoBalance = Math.max(0, item.balance_pendiente - valorAbono);
+    const nuevasCuotas = item.cuotas_pagadas + 1;
+    const nuevoAtraso = Math.max(0, item.monto_atraso - valorAbono);
+
+    await supabase.from('prestamos').update({
+      balance_pendiente: nuevoBalance,
+      cuotas_pagadas: nuevasCuotas,
+      monto_atraso: nuevoAtraso,
+      estado: nuevoBalance === 0 ? 'Liquidado' : 'Activo'
+    }).eq('id', item.id);
+
+    cargarPrestamos();
+  };
+
   const eliminarPrestamo = async (id: string) => {
-    if (!confirm('¿Deseas eliminar este registro de deuda/pago?')) return;
+    if (!confirm('¿Deseas eliminar esta deuda/préstamo?')) return;
     await supabase.from('prestamos').delete().eq('id', id);
     cargarPrestamos();
   };
 
+  const totalDeudasPorPagar = prestamos
+    .filter(p => p.tipo === 'Por Pagar')
+    .reduce((acc, curr) => acc + Number(curr.balance_pendiente), 0);
+
+  const totalAtrasos = prestamos
+    .filter(p => p.tipo === 'Por Pagar')
+    .reduce((acc, curr) => acc + Number(curr.monto_atraso), 0);
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
-      {/* Formulario */}
-      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
+      
+      {/* Formulario de Préstamos */}
+      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
         <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-          💳 Control de Préstamos y Deudas
+          💳 Registrar Préstamo / Deuda
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Institución / Prestamista</label>
-            <input type="text" required value={entidad} onChange={e => setEntidad(e.target.value)} placeholder="Ej. Banco Popular, BHD..." style={inputStyle} />
-          </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo Movimiento</label>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo de Registro</label>
               <select value={tipo} onChange={e => setTipo(e.target.value as any)} style={inputStyle}>
-                <option value="Pago Cuota" style={{ background: bgCard, color: textPrimary }}>Pago Cuota / Abono (-)</option>
-                <option value="Nueva Deuda" style={{ background: bgCard, color: textPrimary }}>Nueva Deuda / Desembolso (+)</option>
+                <option value="Por Pagar">Deuda mía (Por Pagar)</option>
+                <option value="Por Cobrar">Le presté a alguien (Por Cobrar)</option>
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Cuenta</label>
-              <input type="text" value={wallet} onChange={e => setWallet(e.target.value)} style={inputStyle} />
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Banco / Entidad / Persona</label>
+              <input type="text" required value={acreedor} onChange={e => setAcreedor(e.target.value)} placeholder="Ej. Banco BHD, Juan Pérez..." style={inputStyle} />
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto (RD$)</label>
-              <input type="number" step="0.01" required value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" style={inputStyle} />
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto Inicial Original (RD$)</label>
+              <input type="number" step="0.01" required value={montoOriginal} onChange={e => setMontoOriginal(e.target.value)} placeholder="500000" style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Fecha</label>
-              <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Balance Pendiente Actual (RD$)</label>
+              <input type="number" step="0.01" value={balancePendiente} onChange={e => setBalancePendiente(e.target.value)} placeholder="Lo que falta por pagar" style={inputStyle} />
             </div>
           </div>
 
-          <div style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Notas / Detalles</label>
-            <input type="text" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Ej. Cuota #3..." style={inputStyle} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Cuotas Totales</label>
+              <input type="number" value={cuotasTotales} onChange={e => setCuotasTotales(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Cuotas Pagadas</label>
+              <input type="number" value={cuotasPagadas} onChange={e => setCuotasPagadas(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto en Atraso (RD$)</label>
+              <input type="number" step="0.01" value={montoAtraso} onChange={e => setMontoAtraso(e.target.value)} style={{ ...inputStyle, color: Number(montoAtraso) > 0 ? '#ef4444' : textPrimary, fontWeight: 'bold' }} />
+            </div>
           </div>
 
-          <button type="submit" disabled={cargando} style={{ width: '100%', background: '#f59e0b', color: '#000', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
-            {cargando ? 'Guardando...' : 'Registrar Préstamo / Pago'}
+          <button type="submit" disabled={cargando} style={{ width: '100%', background: '#0284c7', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
+            {cargando ? 'Guardando...' : 'Registrar Préstamo'}
           </button>
         </form>
       </div>
 
-      {/* Historial */}
-      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
-        <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-          📜 Historial de Préstamos
+      {/* Lista de Préstamos y Estado de Atrasos */}
+      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
+            📊 Mis Préstamos y Compromisos
+          </span>
+          {totalAtrasos > 0 && (
+            <span style={{ fontSize: '10px', background: '#ef444422', color: '#ef4444', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <AlertCircle size={12} /> Atrasos: RD$ {totalAtrasos.toLocaleString()}
+            </span>
+          )}
         </div>
-        <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-            <thead>
-              <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
-                <th style={{ padding: '8px' }}>Fecha</th>
-                <th style={{ padding: '8px' }}>Institución</th>
-                <th style={{ padding: '8px' }}>Tipo</th>
-                <th style={{ padding: '8px' }}>Monto (RD$)</th>
-                <th style={{ padding: '8px' }}>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {prestamosList.map((row) => (
-                <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
-                  <td style={{ padding: '8px', color: textLabel }}>{row.fecha}</td>
-                  <td style={{ padding: '8px' }}><b>{row.entidad}</b></td>
-                  <td style={{ padding: '8px' }}>{row.tipo}</td>
-                  <td style={{ padding: '8px', color: '#f59e0b', fontWeight: 'bold' }}>
-                    RD$ {Number(row.monto).toFixed(2)}
-                  </td>
-                  <td style={{ padding: '8px' }}>
-                    <button onClick={() => eliminarPrestamo(row.id!)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>
-                      🗑️
+
+        <div style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {prestamos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: textLabel, fontSize: '11px' }}>
+              No tienes préstamos ni deudas registradas.
+            </div>
+          ) : (
+            prestamos.map(p => (
+              <div key={p.id} style={{ background: bgInput, border: `1px solid ${p.monto_atraso > 0 ? '#ef444488' : borderCard}`, borderRadius: '10px', padding: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800' }}>
+                    {p.tipo === 'Por Pagar' ? '🔴' : '🟢'} {p.acreedor}
+                  </span>
+                  <span style={{ fontSize: '10px', background: p.estado === 'Liquidado' ? '#10b98122' : borderCard, color: p.estado === 'Liquidado' ? '#10b981' : textLabel, padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                    {p.estado}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '10px', color: textLabel, marginBottom: '8px' }}>
+                  <div>
+                    Original: <b style={{ color: textPrimary }}>RD$ {Number(p.monto_original).toLocaleString()}</b>
+                  </div>
+                  <div>
+                    Pendiente: <b style={{ color: p.tipo === 'Por Pagar' ? '#ef4444' : '#10b981' }}>RD$ {Number(p.balance_pendiente).toLocaleString()}</b>
+                  </div>
+                  <div>
+                    Cuotas: <b>{p.cuotas_pagadas} / {p.cuotas_totales}</b>
+                  </div>
+                </div>
+
+                {p.monto_atraso > 0 && (
+                  <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    ⚠️ En Atraso: RD$ {Number(p.monto_atraso).toLocaleString()}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                  {p.balance_pendiente > 0 && (
+                    <button onClick={() => abonarCuota(p)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Plus size={12} /> Registrar Pago / Cuota
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  )}
+                  <button onClick={() => eliminarPrestamo(p.id!)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
     </div>
   );
 };
