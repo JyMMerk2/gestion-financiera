@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
-import { Copy, Share2, Check } from 'lucide-react';
+import { Copy, Share2, Check, RefreshCw } from 'lucide-react';
 
 interface ConfiguracionProps {
   perfil: any;
@@ -15,6 +15,9 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
   const [nombreFamilia, setNombreFamilia] = useState('');
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
+  const [tasaUsd, setTasaUsd] = useState('60.00');
+  const [tasaEur, setTasaEur] = useState('65.00');
+  const [estadoTasa, setEstadoTasa] = useState('Cargando...');
   const [guardando, setGuardando] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
@@ -23,8 +26,39 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     if (perfil?.familias) {
       setNombreFamilia(perfil.familias.nombre || '');
       setCodigoInvitacion(perfil.familias.codigo_invitacion || '');
+      if (perfil.familias.tasa_usd) setTasaUsd(String(perfil.familias.tasa_usd));
+      if (perfil.familias.tasa_eur) setTasaEur(String(perfil.familias.tasa_eur));
     }
   }, [perfil]);
+
+  // Consulta tasas financieras en vivo desde API pública
+  const consultarTasasEnVivo = async () => {
+    setEstadoTasa('Consultando mercado...');
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      const data = await res.json();
+
+      if (data && data.rates && data.rates.DOP) {
+        const usdToDop = data.rates.DOP;
+        const eurToUsd = data.rates.EUR;
+        const eurToDop = usdToDop / eurToUsd;
+
+        setTasaUsd(String(Number(usdToDop.toFixed(2))));
+        setTasaEur(String(Number(eurToDop.toFixed(2))));
+        
+        const horaStr = new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+        setEstadoTasa(`🟢 Mercado en vivo (${horaStr})`);
+        return;
+      }
+    } catch (err) {
+      console.error('Error al obtener tasas:', err);
+    }
+    setEstadoTasa('⚠️ Tasa manual / Sin conexión');
+  };
+
+  useEffect(() => {
+    consultarTasasEnVivo();
+  }, []);
 
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,14 +73,16 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         .from('familias')
         .update({
           nombre: nombreFamilia.trim(),
-          codigo_invitacion: codigoInvitacion.trim().toUpperCase()
+          codigo_invitacion: codigoInvitacion.trim().toUpperCase(),
+          tasa_usd: Number(tasaUsd) || 60.00,
+          tasa_eur: Number(tasaEur) || 65.00
         })
         .eq('id', perfil.familia_id);
 
       if (error) {
         alert('Error al actualizar la familia: ' + error.message);
       } else {
-        alert('¡Configuración de familia actualizada correctamente!');
+        alert('¡Configuración de familia y tasas actualizada correctamente!');
         await onPerfilActualizado();
       }
     } catch (err: any) {
@@ -166,6 +202,37 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           </span>
         </div>
 
+        {/* Panel de Tasas de Cambio Automáticas / Editables */}
+        <div style={{ background: borderCard, padding: '12px', borderRadius: '10px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: textTitle }}>
+              💱 Tasas de Cambio Oficiales (Relación a RD$)
+            </span>
+            <button
+              type="button"
+              onClick={consultarTasasEnVivo}
+              style={{ background: 'transparent', border: 'none', color: '#0284c7', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 'bold' }}
+            >
+              <RefreshCw size={12} /> Actualizar
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '6px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>💵 1 USD = RD$</label>
+              <input type="number" step="0.01" value={tasaUsd} onChange={(e) => setTasaUsd(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>💶 1 EUR = RD$</label>
+              <input type="number" step="0.01" value={tasaEur} onChange={(e) => setTasaEur(e.target.value)} style={inputStyle} />
+            </div>
+          </div>
+          
+          <span style={{ fontSize: '9px', color: textLabel, display: 'block', fontStyle: 'italic' }}>
+            {estadoTasa}
+          </span>
+        </div>
+
         <button
           type="submit"
           disabled={guardando}
@@ -182,7 +249,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
             cursor: 'pointer'
           }}
         >
-          {guardando ? 'Guardando Cambios...' : 'Guardar Datos de Familia'}
+          {guardando ? 'Guardando Cambios...' : 'Guardar Datos y Tasas'}
         </button>
       </form>
     </div>
