@@ -80,12 +80,11 @@ export async function iniciarSesion(email: string, pass: string) {
       .eq('id', data.user.id)
       .maybeSingle();
 
-    // Si no existe perfil o el perfil existente no tiene familia_id asignada
+    // Si no existe perfil o no tiene grupo asignado, crearle uno propio
     if (!perfilExistente || !perfilExistente.familia_id) {
       const nombreAuto = cleanEmail.split('@')[0];
       const nuevoCodigo = generarCodigoInvitacion(nombreAuto);
 
-      // Crear su propia familia privada en lugar de agarrar una existente aleatoria
       const { data: nuevaFam } = await supabase
         .from('familias')
         .insert([{ nombre: `Familia de ${nombreAuto}`, codigo_invitacion: nuevoCodigo }])
@@ -115,17 +114,23 @@ export async function obtenerPerfilUsuario() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const { data: perfil } = await supabase
+    // Intentar traer el perfil junto con la familia vinculada
+    const { data: perfil, error } = await supabase
       .from('perfiles')
-      .select('*')
+      .select('*, familias(*)')
       .eq('id', user.id)
       .maybeSingle();
 
+    if (error) {
+      console.error('Error al obtener perfil en consulta primaria:', error);
+    }
+
     if (perfil) {
-      if (perfil.familia_id) {
+      // Si por alguna razón la relación anidada no trajo los datos de familias pero existe familia_id
+      if (perfil.familia_id && !perfil.familias) {
         const { data: fam } = await supabase
           .from('familias')
-          .select('nombre, codigo_invitacion')
+          .select('id, nombre, codigo_invitacion')
           .eq('id', perfil.familia_id)
           .maybeSingle();
         if (fam) perfil.familias = fam;
