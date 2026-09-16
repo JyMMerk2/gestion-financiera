@@ -81,19 +81,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: '#0b0e14', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+      background: '#0b0e14', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+      overflowY: 'auto'
     }}>
       <div style={{
         background: '#ffffff', borderRadius: '24px', overflow: 'hidden',
         width: '100%', maxWidth: '850px', display: 'flex', minHeight: '520px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e5e7eb'
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e5e7eb',
+        maxHeight: '90vh'
       }}>
 
-        {/* Panel Izquierdo: Slider de imágenes con frases */}
-        <div style={{
-          flex: '1', position: 'relative', display: 'flex', flexDirection: 'column',
-          justifyContent: 'flex-end', padding: '30px', color: '#ffffff', overflow: 'hidden'
-        }}>
+        {/* Panel Izquierdo: Slider de imágenes con frases (se oculta en pantallas de celular) */}
+        <div 
+          className="auth-slider-panel"
+          style={{
+            flex: '1', position: 'relative', display: 'flex', flexDirection: 'column',
+            justifyContent: 'flex-end', padding: '30px', color: '#ffffff', overflow: 'hidden'
+          }}
+        >
           {SLIDES.map((slide, idx) => (
             <img
               key={idx}
@@ -143,12 +148,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
           </div>
         </div>
 
-        {/* Panel Derecho: Formulario */}
+        {/* Panel Derecho: Formulario adaptable */}
         <div style={{
-          width: '100%', maxWidth: '400px', padding: '36px 32px',
-          display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#ffffff'
+          width: '100%', maxWidth: '400px', padding: '28px 24px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#ffffff',
+          overflowY: 'auto', margin: '0 auto'
         }}>
-          <div style={{ fontSize: '18px', fontWeight: '900', marginBottom: '20px', textTransform: 'uppercase', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '900', marginBottom: '18px', textTransform: 'uppercase', color: '#111827' }}>
             {modo === 'LOGIN' ? 'Iniciar Sesión' : 'Registro Familiar'}
           </div>
 
@@ -159,7 +165,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
                 <input
                   type="text" required value={nombreUsuario} onChange={e => setNombreUsuario(e.target.value)}
                   placeholder="Ej. Juan Mercado"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '13px', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
             )}
@@ -169,7 +175,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
               <input
                 type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="tu@email.com"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '13px', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -178,7 +184,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
               <input
                 type="password" required value={pass} onChange={e => setPass(e.target.value)}
                 placeholder="••••••••"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '13px', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -189,7 +195,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
                   <input
                     type="password" required value={passConfirm} onChange={e => setPassConfirm(e.target.value)}
                     placeholder="••••••••"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '13px', outline: 'none' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
@@ -197,8 +203,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
                   <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#4f46e5', marginBottom: '4px', textTransform: 'uppercase' }}>Código de Invitación (Opcional)</label>
                   <input
                     type="text" value={codigoInvitacion} onChange={e => setCodigoInvitacion(e.target.value.toUpperCase())}
-                    placeholder="Ej. FAM-7A9B (Déjalo vacío si creas un grupo nuevo)"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #4f46e5', background: 'rgba(79, 70, 229, 0.05)', fontSize: '11px', outline: 'none' }}
+                    placeholder="Ej. FAM-7A9B (Vacío para grupo nuevo)"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #4f46e5', background: 'rgba(79, 70, 229, 0.05)', fontSize: '11px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </>
@@ -239,6 +245,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
         </div>
 
       </div>
+
+      {/* Regla CSS interna para celulares */}
+      <style>{`
+        @media (max-width: 640px) {
+          .auth-slider-panel {
+            display: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
+
+export default AuthModal;
