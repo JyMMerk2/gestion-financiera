@@ -88,9 +88,10 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
       const payload = {
         familia_id: familiaId,
         acreedor: acreedor.trim(),
-        entidad: acreedor.trim(), // Asignado para compatibilidad con ambas columnas
+        entidad: acreedor.trim(),
         tipo,
         fecha: fecha || new Date().toISOString().split('T')[0],
+        monto: pend,              // Compatible con columna 'monto'
         monto_original: orig,
         monto_dop: pend,
         balance_pendiente: pend,
@@ -138,6 +139,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
       const { error: err1 } = await supabase.from('prestamos').update({
         balance_pendiente: nuevoBalance,
+        monto: nuevoBalance,
         cuotas_pagadas: nuevasCuotas,
         monto_atraso: nuevoAtraso,
         estado: nuevoBalance === 0 ? 'Liquidado' : 'Activo'
@@ -299,7 +301,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                   {prestamos.length === 0 && <option value="">No hay préstamos activos</option>}
                   {prestamos.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.acreedor || p.entidad} (Pendiente: RD$ {Number(p.balance_pendiente).toLocaleString()})
+                      {p.acreedor || p.entidad} (Pendiente: RD$ {Number(p.balance_pendiente ?? p.monto ?? 0).toLocaleString()})
                     </option>
                   ))}
                 </select>
@@ -361,9 +363,9 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '10px', color: textLabel, marginBottom: '8px' }}>
-                  <div>Original: <b style={{ color: textPrimary }}>RD$ {Number(p.monto_original).toLocaleString()}</b></div>
-                  <div>Pendiente: <b style={{ color: p.tipo === 'Por Pagar' ? '#ef4444' : '#10b981' }}>RD$ {Number(p.balance_pendiente).toLocaleString()}</b></div>
-                  <div>Cuotas: <b>{p.cuotas_pagadas} / {p.cuotas_totales}</b></div>
+                  <div>Original: <b style={{ color: textPrimary }}>RD$ {Number(p.monto_original ?? p.monto ?? 0).toLocaleString()}</b></div>
+                  <div>Pendiente: <b style={{ color: p.tipo === 'Por Pagar' ? '#ef4444' : '#10b981' }}>RD$ {Number(p.balance_pendiente ?? p.monto ?? 0).toLocaleString()}</b></div>
+                  <div>Cuotas: <b>{p.cuotas_pagadas ?? 0} / {p.cuotas_totales ?? 1}</b></div>
                 </div>
 
                 {p.monto_atraso > 0 && (
