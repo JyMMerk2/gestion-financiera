@@ -16,9 +16,12 @@ export default function App() {
   const [errorInicial, setErrorInicial] = useState<string | null>(null);
   const [seccionActual, setSeccionActual] = useState<'dashboard' | 'presupuesto' | 'ahorros' | 'patrimonio' | 'prestamos' | 'metas' | 'configuracion'>('dashboard');
 
-  const [modoOscuro, setModoOscuro] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
-  });
+  const [modoOscuro, setModoOscuro] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [moneda, setMoneda] = useState<'RD$' | 'USD'>(() => (localStorage.getItem('moneda') as 'RD$' | 'USD') || 'RD$');
+
+  useEffect(() => {
+    localStorage.setItem('moneda', moneda);
+  }, [moneda]);
 
   useEffect(() => {
     if (modoOscuro) {
@@ -90,7 +93,6 @@ export default function App() {
     return <AuthModal onSuccess={verificarSesion} />;
   }
 
-  // Extraer el identificador de la familia asegurando un respaldo seguro
   const familiaIdSegura = perfil?.familia_id || perfil?.familias?.id || 'general';
 
   return (
@@ -117,6 +119,7 @@ export default function App() {
             onLogout={handleLogout}
             onNavigate={(sec) => setSeccionActual(sec as any)}
             modoOscuro={modoOscuro}
+            moneda={moneda}
           />
         )}
 
@@ -124,6 +127,7 @@ export default function App() {
           <Presupuesto
             familiaId={familiaIdSegura}
             mesSeleccionado={mesSeleccionado}
+            moneda={moneda}
           />
         )}
 
@@ -131,31 +135,37 @@ export default function App() {
           <Ahorros
             familiaId={familiaIdSegura}
             mesSeleccionado={mesSeleccionado}
+            moneda={moneda}
           />
         )}
 
         {seccionActual === 'patrimonio' && (
           <Patrimonio
             familiaId={familiaIdSegura}
+            moneda={moneda}
           />
         )}
 
         {seccionActual === 'prestamos' && (
           <Prestamos
             familiaId={familiaIdSegura}
+            moneda={moneda}
           />
         )}
 
         {seccionActual === 'metas' && (
           <Metas
             familiaId={familiaIdSegura}
+            moneda={moneda}
           />
         )}
 
         {seccionActual === 'configuracion' && (
           <Configuracion 
             perfil={perfil} 
-            onPerfilActualizado={verificarSesion} 
+            onPerfilActualizado={verificarSesion}
+            moneda={moneda}
+            setMoneda={setMoneda}
           />
         )}
       </main>
