@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { RegistroPrestamo } from '../types';
-import { useModoOscuro } from '../hook/useModoOscuro'; // 👈 Ruta corregida a '../hook/'
+import { useModoOscuro } from '../hooks/useModoOscuro'; // 👈 Ruta corregida a '../hooks/'
 
 interface PrestamosProps {
   familiaId: string;
 }
 
 export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
-  // Importamos las variables automáticas de modo oscuro/claro desde tu hook
+  // Importamos las variables automáticas de modo oscuro/claro desde tu hooks
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, esOscuro } = useModoOscuro();
 
   const [entidad, setEntidad] = useState('');
