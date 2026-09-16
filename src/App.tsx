@@ -7,6 +7,7 @@ import { Ahorros } from './components/Ahorros';
 import { Patrimonio } from './components/Patrimonio';
 import Prestamos from './components/Prestamos';
 import Metas from './components/Metas';
+import { Configuracion } from './components/Configuracion';
 import { obtenerPerfilUsuario, cerrarSesion } from './services/auth';
 
 export default function App() {
@@ -152,24 +153,10 @@ export default function App() {
         )}
 
         {seccionActual === 'configuracion' && (
-          <div style={{ 
-            background: modoOscuro ? '#1e293b' : '#ffffff', 
-            padding: '24px', 
-            borderRadius: '16px', 
-            border: modoOscuro ? '1px solid #334155' : '1px solid #e2e8f0', 
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)' 
-          }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: modoOscuro ? '#38bdf8' : '#0f172a' }}>
-              Configuración del Perfil y Grupo Familiar
-            </h2>
-            <div style={{ fontSize: '13px', color: modoOscuro ? '#cbd5e1' : '#475569', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <p>Usuario: <strong>{perfil?.nombre_usuario || perfil?.email}</strong></p>
-              <p>Email: <strong>{perfil?.email}</strong></p>
-              <p>
-                Código de Invitación Familiar: <strong style={{ color: '#38bdf8' }}>{perfil?.familias?.codigo_invitacion || 'No asignado'}</strong>
-              </p>
-            </div>
-          </div>
+          <Configuracion 
+            perfil={perfil} 
+            onPerfilActualizado={verificarSesion} 
+          />
         )}
       </main>
     </div>
