@@ -32,7 +32,7 @@ export default function App() {
     }
   }, [modoOscuro]);
 
-  const [mesSeleccionado] = useState(() => {
+  const [mesSeleccionado, setMesSeleccionado] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
@@ -112,7 +112,7 @@ export default function App() {
           <Dashboard
             perfil={perfil}
             onLogout={handleLogout}
-            onNavigate={(sec) => setSeccionActual(sec as any)}
+            onNavigate={(sec: string) => setSeccionActual(sec.toLowerCase() as any)}
             modoOscuro={modoOscuro}
           />
         )}
@@ -121,6 +121,7 @@ export default function App() {
           <Presupuesto
             familiaId={familiaIdSegura}
             mesSeleccionado={mesSeleccionado}
+            setMesSeleccionado={setMesSeleccionado}
           />
         )}
 
