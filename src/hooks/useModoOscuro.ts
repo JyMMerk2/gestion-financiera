@@ -16,12 +16,14 @@ export const useModoOscuro = () => {
     return () => observer.disconnect();
   }, []);
 
+  // Paleta idéntica al Dashboard
   const bgCard = esOscuro ? '#1e293b' : '#ffffff';
   const borderCard = esOscuro ? '#334155' : '#e5e7eb';
   const textPrimary = esOscuro ? '#f8fafc' : '#1e293b';
   const textLabel = esOscuro ? '#94a3b8' : '#6b7280';
   const bgInput = esOscuro ? '#0f172a' : '#f9fafb';
-  const borderInput = esOscuro ? '#475569' : '#d1d5db';
+  const borderInput = esOscuro ? '#334155' : '#d1d5db';
+  const textTitle = esOscuro ? '#38bdf8' : '#2563eb';
 
   const inputStyle: CSSProperties = {
     width: '100%',
@@ -41,6 +43,8 @@ export const useModoOscuro = () => {
     textPrimary,
     textLabel,
     bgInput,
+    borderInput,
+    textTitle,
     inputStyle
   };
 };
