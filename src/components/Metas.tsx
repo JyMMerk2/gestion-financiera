@@ -5,7 +5,7 @@ import { ExternalLink, CheckSquare, Square, Trash2 } from 'lucide-react';
 
 interface MetasProps {
   familiaId: string;
-  moneda?: 'RD$' | 'USD';
+  perfil?: any;
 }
 
 interface ItemMeta {
@@ -16,24 +16,23 @@ interface ItemMeta {
   completado: boolean;
   precio?: number;
   enlace?: string;
-  moneda_item?: string;
+  moneda_item?: 'RD$' | 'USD' | 'EUR';
 }
 
-export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 'RD$' }) => {
+export const Metas: React.FC<MetasProps> = ({ familiaId, perfil }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
 
   const [titulo, setTitulo] = useState('');
   const [categoria, setCategoria] = useState<string>('Solar / Casa');
   const [precio, setPrecio] = useState('');
+  const [monedaItem, setMonedaItem] = useState<'RD$' | 'USD' | 'EUR'>('USD');
   const [enlace, setEnlace] = useState('');
-  const [monedaLocal, setMonedaLocal] = useState<'RD$' | 'USD'>(monedaGlobal);
 
   const [metas, setMetas] = useState<ItemMeta[]>([]);
   const [cargando, setCargando] = useState(false);
 
-  useEffect(() => {
-    setMonedaLocal(monedaGlobal);
-  }, [monedaGlobal]);
+  const tasaUsd = perfil?.familias?.tasa_usd || 60.00;
+  const tasaEur = perfil?.familias?.tasa_eur || 65.00;
 
   const cargarMetas = async () => {
     if (!familiaId) return;
@@ -58,9 +57,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
   const formatearUrl = (url: string) => {
     if (!url) return '';
     const cleanUrl = url.trim();
-    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-      return cleanUrl;
-    }
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) return cleanUrl;
     return `https://${cleanUrl}`;
   };
 
@@ -76,7 +73,8 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
         titulo: titulo.trim(),
         completado: false,
         precio: precio ? Number(precio) : 0,
-        enlace: enlace.trim() ? formatearUrl(enlace) : ''
+        enlace: enlace.trim() ? formatearUrl(enlace) : '',
+        moneda_item: monedaItem
       };
 
       const { error } = await supabase.from('metas').insert([payload]);
@@ -117,31 +115,29 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
     return Math.round((listos / items.length) * 100);
   };
 
-  const calcularTotalEstimado = (filtroFn: (cat: string) => boolean) => {
+  // Convierte automáticamente cada artículo a Pesos Dominicanos (RD$) para unificar la suma final
+  const calcularTotalEstimadoRD = (filtroFn: (cat: string) => boolean) => {
     return metas
       .filter(m => filtroFn(m.categoria))
-      .reduce((acc, curr) => acc + (Number(curr.precio) || 0), 0);
+      .reduce((acc, curr) => {
+        const monto = Number(curr.precio) || 0;
+        const divisa = curr.moneda_item || 'RD$';
+        
+        let montoEnPesos = monto;
+        if (divisa === 'USD') montoEnPesos = monto * tasaUsd;
+        if (divisa === 'EUR') montoEnPesos = monto * tasaEur;
+
+        return acc + montoEnPesos;
+      }, 0);
   };
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
       
       {/* Formulario */}
-      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
-            🎯 Registro de Objetivos y Compras
-          </span>
-
-          {/* Selector Rápido de Moneda */}
-          <select
-            value={monedaLocal}
-            onChange={(e) => setMonedaLocal(e.target.value as 'RD$' | 'USD')}
-            style={{ ...inputStyle, width: '80px', padding: '2px 6px', fontSize: '10px', fontWeight: 'bold' }}
-          >
-            <option value="RD$">RD$</option>
-            <option value="USD">USD $</option>
-          </select>
+      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
+        <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
+          🎯 Registro de Objetivos y Compras
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -159,10 +155,18 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
             <input type="text" required value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ej. Play Yard, Cortar árboles, Cuna..." style={inputStyle} />
           </div>
 
+          {/* Selector de Moneda al lado del Precio */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Precio Estimado ({monedaLocal})</label>
-              <input type="number" step="0.01" value={precio} onChange={e => setPrecio(e.target.value)} placeholder="0.00" style={inputStyle} />
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Precio Estimado</label>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <input type="number" step="0.01" value={precio} onChange={e => setPrecio(e.target.value)} placeholder="0.00" style={{ ...inputStyle, flex: 1 }} />
+                <select value={monedaItem} onChange={e => setMonedaItem(e.target.value as any)} style={{ ...inputStyle, width: '65px', padding: '0 4px', fontWeight: 'bold' }}>
+                  <option value="USD">USD$</option>
+                  <option value="RD$">RD$</option>
+                  <option value="EUR">EUR€</option>
+                </select>
+              </div>
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Link / Enlace de la Tienda</label>
@@ -176,10 +180,15 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
         </form>
       </div>
 
-      {/* Lista de Objetivos Activos */}
-      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
-        <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-          📋 Lista de Objetivos Activos
+      {/* Lista de Objetivos Activos con Encabezado Informativo de Tasa */}
+      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
+            📋 Lista de Objetivos Activos
+          </span>
+          <span style={{ fontSize: '10px', color: textLabel }}>
+            Tasa en vivo: <b>1 USD = RD$ {tasaUsd}</b>
+          </span>
         </div>
 
         <div style={{ maxHeight: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -191,7 +200,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
               <span>{calcularProgreso(esCategoriaCasa)}%</span>
             </div>
             <div style={{ fontSize: '10px', color: textLabel, marginBottom: '6px' }}>
-              Total Est.: <b>{monedaLocal} {calcularTotalEstimado(esCategoriaCasa).toLocaleString()}</b>
+              Total Est. (en Pesos): <b style={{ color: '#0284c7' }}>RD$ {Math.round(calcularTotalEstimadoRD(esCategoriaCasa)).toLocaleString()}</b>
             </div>
             <div style={{ width: '100%', height: '6px', background: borderCard, borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
               <div style={{ width: `${calcularProgreso(esCategoriaCasa)}%`, height: '100%', background: '#0284c7', transition: 'width 0.3s' }} />
@@ -199,10 +208,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
 
             {metas.filter(m => esCategoriaCasa(m.categoria)).map(item => (
               <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${borderCard}` }}>
-                <div 
-                  onClick={() => toggleEstado(item.id!, item.completado)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}
-                >
+                <div onClick={() => toggleEstado(item.id!, item.completado)} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}>
                   {item.completado ? <CheckSquare size={16} color="#10b981" /> : <Square size={16} color={textLabel} />}
                   <span>{item.titulo}</span>
                 </div>
@@ -210,12 +216,12 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {item.precio ? (
                     <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#0284c7' }}>
-                      {monedaLocal} {Number(item.precio).toLocaleString()}
+                      {item.moneda_item || 'USD'} {Number(item.precio).toLocaleString()}
                     </span>
                   ) : null}
 
                   {item.enlace ? (
-                    <a href={formatearUrl(item.enlace)} target="_blank" rel="noreferrer noopener" style={{ color: '#38bdf8', display: 'flex', alignItems: 'center' }} title="Ir a la tienda">
+                    <a href={formatearUrl(item.enlace)} target="_blank" rel="noreferrer noopener" style={{ color: '#38bdf8', display: 'flex', alignItems: 'center' }}>
                       <ExternalLink size={13} />
                     </a>
                   ) : null}
@@ -235,7 +241,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
               <span>{calcularProgreso(esCategoriaBebe)}%</span>
             </div>
             <div style={{ fontSize: '10px', color: textLabel, marginBottom: '6px' }}>
-              Total Est.: <b>{monedaLocal} {calcularTotalEstimado(esCategoriaBebe).toLocaleString()}</b>
+              Total Est. (en Pesos): <b style={{ color: '#ec4899' }}>RD$ {Math.round(calcularTotalEstimadoRD(esCategoriaBebe)).toLocaleString()}</b>
             </div>
             <div style={{ width: '100%', height: '6px', background: borderCard, borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
               <div style={{ width: `${calcularProgreso(esCategoriaBebe)}%`, height: '100%', background: '#ec4899', transition: 'width 0.3s' }} />
@@ -243,10 +249,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
 
             {metas.filter(m => esCategoriaBebe(m.categoria)).map(item => (
               <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${borderCard}` }}>
-                <div 
-                  onClick={() => toggleEstado(item.id!, item.completado)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}
-                >
+                <div onClick={() => toggleEstado(item.id!, item.completado)} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}>
                   {item.completado ? <CheckSquare size={16} color="#10b981" /> : <Square size={16} color={textLabel} />}
                   <span>{item.titulo}</span>
                 </div>
@@ -254,12 +257,12 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {item.precio ? (
                     <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#ec4899' }}>
-                      {monedaLocal} {Number(item.precio).toLocaleString()}
+                      {item.moneda_item || 'USD'} {Number(item.precio).toLocaleString()}
                     </span>
                   ) : null}
 
                   {item.enlace ? (
-                    <a href={formatearUrl(item.enlace)} target="_blank" rel="noreferrer noopener" style={{ color: '#ec4899', display: 'flex', alignItems: 'center' }} title="Ir a la tienda">
+                    <a href={formatearUrl(item.enlace)} target="_blank" rel="noreferrer noopener" style={{ color: '#ec4899', display: 'flex', alignItems: 'center' }}>
                       <ExternalLink size={13} />
                     </a>
                   ) : null}
