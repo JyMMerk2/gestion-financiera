@@ -11,7 +11,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscuro = false }) => {
-  // 1. Modo Privacidad activado por defecto
+  // Modo Privacidad activado por defecto
   const [modoPrivacidad, setModoPrivacidad] = useState(true);
   const [mesSeleccionado, setMesSeleccionado] = useState(() => {
     const now = new Date();
@@ -235,14 +235,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
         </div>
       </div>
 
-      {/* Bloque 1: Ingresos, Gastos y Ahorro Neto con Iconos Solicitados */}
+      {/* Bloque 1: Ingresos, Gastos y Ahorro Neto */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
         <div>
           <div style={{ fontSize: '10px', fontWeight: '800', color: textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
             <TrendingUp size={14} color="#10b981" /> INGRESOS
           </div>
           <div style={{ fontSize: '22px', fontWeight: '900', color: '#10b981', ...blurStyle }}>
-            RD$ {ingresosMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            RD$ {ingresosMes.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div>
@@ -250,7 +250,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
             <TrendingDown size={14} color="#ef4444" /> GASTOS
           </div>
           <div style={{ fontSize: '22px', fontWeight: '900', color: '#ef4444', ...blurStyle }}>
-            RD$ {gastosMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            RD$ {gastosMes.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div>
@@ -258,12 +258,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
             <Coins size={14} color="#0284c7" /> AHORRO NETO
           </div>
           <div style={{ fontSize: '22px', fontWeight: '900', color: textPrimary, ...blurStyle }}>
-            RD$ {ahorroMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            RD$ {ahorroMes.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
       </div>
 
-      {/* Bloque 2: Gráfica de Ahorro Mensual (Últimos 12 Meses) */}
+      {/* Bloque 2: Gráfica de Ahorro Mensual */}
       <div style={{ background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: textPrimary }}>
           Ahorro mensual — últimos 12 meses
@@ -299,7 +299,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
         </div>
       </div>
 
-      {/* Bloque 3: Últimas Transacciones del Mes */}
+      {/* Bloque 3: Últimas Transacciones del Mes con Formato Corregido */}
       <div style={{ background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '12px', color: textPrimary }}>Últimas transacciones del mes</div>
         {ultimasTransacciones.length === 0 ? (
@@ -315,7 +315,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
                   <div style={{ fontSize: '9px', color: textSecondary }}>{t.fecha} • {t.wallet}</div>
                 </div>
                 <div style={{ fontSize: '12px', fontWeight: '900', color: t.tipo === 'Ingreso' ? '#10b981' : '#ef4444', ...blurStyle }}>
-                  {t.tipo === 'Ingreso' ? '+' : '-'} RD$ {Number(t.monto_dop).toFixed(2)}
+                  {t.tipo === 'Ingreso' ? '+' : '-'} RD$ {Number(t.monto_dop).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
             ))}
@@ -323,14 +323,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
         )}
       </div>
 
-      {/* Bloque 4: Indicadores Generales con Iconos */}
+      {/* Bloque 4: Indicadores Generales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px' }}>
         <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #ef4444' }}>
           <div style={{ fontSize: '9px', fontWeight: '800', color: textSecondary, display: 'flex', alignItems: 'center', gap: '4px' }}>
             <CreditCard size={12} color="#ef4444" /> DEUDAS PENDIENTES
           </div>
           <div style={{ fontSize: '16px', fontWeight: '800', color: textPrimary, marginTop: '4px', ...blurStyle }}>
-            RD$ {deudasTotales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            RD$ {deudasTotales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #6366f1' }}>
@@ -338,7 +338,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
             <Building2 size={12} color="#6366f1" /> PATRIMONIO NETO
           </div>
           <div style={{ fontSize: '16px', fontWeight: '800', color: textPrimary, marginTop: '4px', ...blurStyle }}>
-            RD$ {patrimonioNeto.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            RD$ {patrimonioNeto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #10b981' }}>
@@ -346,7 +346,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
             <Landmark size={12} color="#10b981" /> DISPONIBLE REAL
           </div>
           <div style={{ fontSize: '16px', fontWeight: '800', color: textPrimary, marginTop: '4px', ...blurStyle }}>
-            RD$ {disponibleReal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            RD$ {disponibleReal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
       </div>
@@ -365,7 +365,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
             <div key={wKey} style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '12px', padding: '12px', borderTop: `4px solid ${modoOscuro ? '#38bdf8' : '#111827'}` }}>
               <div style={{ fontSize: '10px', fontWeight: '700', color: textSecondary }}>{wKey}</div>
               <div style={{ fontSize: '13px', fontWeight: '800', color: textPrimary, marginTop: '2px', ...blurStyle }}>
-                RD$ {walletsBalances[wKey].toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                RD$ {walletsBalances[wKey].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           ))
