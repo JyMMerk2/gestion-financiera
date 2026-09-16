@@ -70,6 +70,16 @@ export interface RegistroPrestamo {
   created_at?: string;
 }
 
+export interface MetaObjetivo {
+  id?: string;
+  familia_id: string;
+  categoria: 'Solar / Casa' | 'Bebé 2027' | 'General';
+  titulo: string;
+  completado: boolean;
+  monto_estimado?: number;
+  monto_actual?: number;
+}
+
 export interface ElementoConfig {
   id?: string;
   familia_id?: string;
