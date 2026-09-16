@@ -74,7 +74,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
         cuotas_totales: Number(cuotasTotales) || 1,
         cuotas_pagadas: Number(cuotasPagadas) || 0,
         monto_atraso: Number(montoAtraso) || 0,
-        wallet: wallet || 'Efectivo',
+        wallet: wallet || (walletsDinamicas[0]?.nombre ?? 'Efectivo'),
         estado: 'Activo'
       }]);
 
@@ -91,8 +91,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   };
 
   const abonarCuota = async (item: any) => {
-    const listaNombres = walletsDinamicas.map(w => w.nombre).join(', ');
-    const walletPago = prompt(`¿Desde cuál Wallet realizarás el pago? (${listaNombres || 'Efectivo'}):`, wallet || 'Efectivo');
+    const walletPago = prompt(`¿Desde cuál Wallet realizarás el pago?`, wallet || walletsDinamicas[0]?.nombre || 'Efectivo');
     if (!walletPago) return;
 
     const valorCuotaStr = prompt(`Ingresa el monto a pagar para ${item.acreedor}:`);
@@ -111,7 +110,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
       estado: nuevoBalance === 0 ? 'Liquidado' : 'Activo'
     }).eq('id', item.id);
 
-    // 2. Descontar en Presupuesto como Gasto
+    // 2. Registrar el descuento en el Presupuesto automáticamente
     await supabase.from('presupuesto').insert([{
       familia_id: familiaId,
       fecha: new Date().toISOString().split('T')[0],
@@ -175,15 +174,17 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet Deuda</label>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Cuenta</label>
                 <select value={wallet} onChange={e => setWallet(e.target.value)} style={inputStyle}>
                   {walletsDinamicas.length === 0 ? (
                     <option value="Efectivo">Efectivo</option>
                   ) : (
                     walletsDinamicas.map(w => (
-                      <option key={w.id} value={w.nombre}>{w.nombre} ({w.moneda})</option>
+                      <option key={w.id} value={w.nombre}>
+                        {w.nombre} ({w.moneda})
+                      </option>
                     ))
                   )}
                 </select>
