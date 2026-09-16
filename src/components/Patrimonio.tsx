@@ -87,7 +87,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
   const totalPatrimonio = activos.reduce((acc, curr) => acc + Number(curr.valor_dop || 0), 0);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
       
       {/* Formulario + Administrador de Cuentas */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -112,7 +112,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
               <input type="text" required value={nombreBien} onChange={e => setNombreBien(e.target.value)} placeholder="Ej. Acciones Cooperativa, Terreno..." style={inputStyle} />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Valor Estimado (RD$)</label>
                 <input type="number" step="0.01" required value={valor} onChange={e => setValor(e.target.value)} placeholder="0.00" style={inputStyle} />
