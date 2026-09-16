@@ -1,12 +1,9 @@
 import { supabase } from './supabase';
 
-function generarCodigoInvitacion(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = 'FAM-';
-  for (let i = 0; i < 4; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+function generarCodigoInvitacion(nombreUsuario?: string): string {
+  const base = nombreUsuario ? nombreUsuario.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8) : 'FAM';
+  const numeroRandom = Math.floor(1000 + Math.random() * 9000);
+  return `${base}-${numeroRandom}`;
 }
 
 export async function registrarUsuario(
@@ -28,6 +25,7 @@ export async function registrarUsuario(
 
   let familiaId: string | null = null;
 
+  // 1. Si proporcionó un código de invitación, unirse a esa familia
   if (codigoInvitacionExistente && codigoInvitacionExistente.trim() !== '') {
     const { data: familiaData } = await supabase
       .from('familias')
@@ -40,8 +38,9 @@ export async function registrarUsuario(
     }
   }
 
+  // 2. Si no viene código o no existe, crear un grupo familiar privado nuevo automáticamente
   if (!familiaId) {
-    const nuevoCodigo = generarCodigoInvitacion();
+    const nuevoCodigo = generarCodigoInvitacion(nombreUsuario);
     const { data: nuevaFamilia } = await supabase
       .from('familias')
       .insert([{ nombre: `Familia de ${nombreUsuario}`, codigo_invitacion: nuevoCodigo }])
@@ -53,6 +52,7 @@ export async function registrarUsuario(
     }
   }
 
+  // 3. Crear el perfil de usuario asociado a la familia
   await supabase.from('perfiles').upsert([{ 
     id: authData.user.id, 
     email: cleanEmail, 
@@ -76,18 +76,29 @@ export async function iniciarSesion(email: string, pass: string) {
   if (data.user) {
     const { data: perfilExistente } = await supabase
       .from('perfiles')
-      .select('id')
+      .select('id, familia_id')
       .eq('id', data.user.id)
       .maybeSingle();
 
-    if (!perfilExistente) {
-      const { data: famExistente } = await supabase.from('familias').select('id').limit(1).maybeSingle();
-      
+    // Si no existe perfil o el perfil existente no tiene familia_id asignada
+    if (!perfilExistente || !perfilExistente.familia_id) {
+      const nombreAuto = cleanEmail.split('@')[0];
+      const nuevoCodigo = generarCodigoInvitacion(nombreAuto);
+
+      // Crear su propia familia privada en lugar de agarrar una existente aleatoria
+      const { data: nuevaFam } = await supabase
+        .from('familias')
+        .insert([{ nombre: `Familia de ${nombreAuto}`, codigo_invitacion: nuevoCodigo }])
+        .select('id')
+        .maybeSingle();
+
+      const familiaAsignadaId = nuevaFam ? nuevaFam.id : null;
+
       await supabase.from('perfiles').upsert([{
         id: data.user.id,
         email: cleanEmail,
-        nombre_usuario: cleanEmail.split('@')[0],
-        familia_id: famExistente ? famExistente.id : null
+        nombre_usuario: nombreAuto,
+        familia_id: familiaAsignadaId
       }]);
     }
   }
@@ -104,7 +115,6 @@ export async function obtenerPerfilUsuario() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    // Consulta simplificada para evitar fallos por join de tablas o RLS
     const { data: perfil } = await supabase
       .from('perfiles')
       .select('*')
@@ -112,7 +122,6 @@ export async function obtenerPerfilUsuario() {
       .maybeSingle();
 
     if (perfil) {
-      // Intenta obtener información de la familia si existe
       if (perfil.familia_id) {
         const { data: fam } = await supabase
           .from('familias')
@@ -124,7 +133,6 @@ export async function obtenerPerfilUsuario() {
       return perfil;
     }
 
-    // Perfil por defecto en memoria si aún no está en BD para no bloquear el login
     return {
       id: user.id,
       email: user.email,
