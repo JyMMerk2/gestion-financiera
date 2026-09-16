@@ -5,17 +5,14 @@ import { ExternalLink, CheckSquare, Square, Trash2 } from 'lucide-react';
 
 interface MetasProps {
   familiaId: string;
+  moneda?: 'RD$' | 'USD';
 }
 
-interface ItemMeta {
-  id?: string;
-  familia_id: string;
-  categoria: string;
-  titulo: string;
-  completado: boolean;
-  precio?: number;
-  enlace?: string;
-}
+export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
+  // ... resto del componente ...
+  
+  // En el renderizado del total y precios:
+  // {moneda} {Number(item.precio).toLocaleString()}
 
 export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
