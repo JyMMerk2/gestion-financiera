@@ -31,11 +31,11 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
   const cargarMetas = async () => {
     if (!familiaId) return;
 
-    // Filtra las metas asociadas a esta familia o de caracter 'general'
+    // Consulta estricta por tu familia única
     const { data, error } = await supabase
       .from('metas')
       .select('*')
-      .or(`familia_id.eq.${familiaId},familia_id.eq.general`)
+      .eq('familia_id', familiaId)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -51,15 +51,12 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titulo.trim()) return;
+    if (!titulo.trim() || !familiaId) return;
 
     setCargando(true);
     try {
-      // Usa familiaId real recibido de la sesión/perfil
-      const targetFamiliaId = familiaId && familiaId.trim() !== '' ? familiaId : 'general';
-
       const payload = {
-        familia_id: targetFamiliaId,
+        familia_id: familiaId, // ID único de tu familia
         categoria,
         titulo: titulo.trim(),
         completado: false,
