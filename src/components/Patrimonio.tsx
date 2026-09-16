@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { RegistroPatrimonio } from '../types';
 import { useModoOscuro } from '../hooks/useModoOscuro';
+import { Trash2 } from 'lucide-react';
 
 interface PatrimonioProps {
   familiaId: string;
@@ -10,12 +10,12 @@ interface PatrimonioProps {
 export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
 
-  const [nombre, setNombre] = useState('');
+  const [nombreBien, setNombreBien] = useState('');
+  const [tipoBien, setTipoBien] = useState('Acciones / Inversiones');
   const [valor, setValor] = useState('');
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
-  const [fotoUrl, setFotoUrl] = useState('');
 
-  const [patrimonioList, setPatrimonioList] = useState<RegistroPatrimonio[]>([]);
+  const [activos, setActivos] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
 
   const cargarPatrimonio = async () => {
@@ -24,9 +24,9 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
       .from('patrimonio')
       .select('*')
       .eq('familia_id', familiaId)
-      .order('fecha', { ascending: false });
+      .order('created_at', { ascending: false });
 
-    if (data) setPatrimonioList(data);
+    if (data) setActivos(data);
   };
 
   useEffect(() => {
@@ -35,46 +35,59 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!valor || Number(valor) <= 0) return;
+    if (!nombreBien.trim() || !valor) return;
 
     setCargando(true);
     try {
       await supabase.from('patrimonio').insert([{
         familia_id: familiaId,
-        fecha,
-        nombre,
+        nombre_bien: nombreBien.trim(),
+        tipo_bien: tipoBien,
         valor_dop: Number(valor),
-        foto_url: fotoUrl
+        fecha_registro: fecha
       }]);
 
-      setNombre('');
+      setNombreBien('');
       setValor('');
-      setFotoUrl('');
       cargarPatrimonio();
     } catch (err: any) {
-      alert('Error al guardar en patrimonio: ' + err.message);
+      alert('Error al guardar patrimonio: ' + err.message);
     } finally {
       setCargando(false);
     }
   };
 
-  const eliminarBien = async (id: string) => {
-    if (!confirm('¿Deseas eliminar este activo del patrimonio?')) return;
+  const eliminarActivo = async (id: string) => {
+    if (!confirm('¿Deseas eliminar este bien del patrimonio?')) return;
     await supabase.from('patrimonio').delete().eq('id', id);
     cargarPatrimonio();
   };
 
+  const totalPatrimonio = activos.reduce((acc, curr) => acc + Number(curr.valor_dop || 0), 0);
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
-      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
+      
+      {/* Formulario de Activos / Acciones */}
+      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
         <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-          💎 Registrar Activo / Bien
+          💎 Registrar Activo / Bien / Acciones
         </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Nombre del Bien</label>
-            <input type="text" required value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej. Terreno, Vehículo, Joyas..." style={inputStyle} />
+            <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo de Activo</label>
+            <select value={tipoBien} onChange={e => setTipoBien(e.target.value)} style={inputStyle}>
+              <option value="Acciones / Inversiones">📈 Acciones / Inversiones / Puesto de Bolsa</option>
+              <option value="Inmueble / Terreno">🏠 Inmueble / Terreno / Casa</option>
+              <option value="Vehículo">🚗 Vehículo</option>
+              <option value="Otros Activos">💼 Otros Activos de Valor</option>
+            </select>
+          </div>
+
+          <div style={{ marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Nombre del Bien / Inversión</label>
+            <input type="text" required value={nombreBien} onChange={e => setNombreBien(e.target.value)} placeholder="Ej. Acciones JMMB, Solar Casa, Tesla..." style={inputStyle} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
@@ -88,42 +101,46 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
             </div>
           </div>
 
-          <div style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Foto / Referencia (Opcional)</label>
-            <input type="text" value={fotoUrl} onChange={e => setFotoUrl(e.target.value)} placeholder="Ej. URL de la foto..." style={inputStyle} />
-          </div>
-
           <button type="submit" disabled={cargando} style={{ width: '100%', background: '#8b5cf6', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
             {cargando ? 'Guardando...' : 'Registrar Patrimonio'}
           </button>
         </form>
       </div>
 
-      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
-        <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-          🏛️ Historial de Patrimonio
+      {/* Historial y Total de Patrimonio */}
+      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
+            🏛️ Historial de Patrimonio
+          </span>
+          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8b5cf6' }}>
+            Total: RD$ {totalPatrimonio.toLocaleString()}
+          </span>
         </div>
-        <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
+
+        <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
             <thead>
               <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
                 <th style={{ padding: '8px' }}>Fecha</th>
-                <th style={{ padding: '8px' }}>Bien / Activo</th>
-                <th style={{ padding: '8px' }}>Valor (RD$)</th>
+                <th style={{ padding: '8px' }}>Bien / Inversión</th>
+                <th style={{ padding: '8px' }}>Tipo</th>
+                <th style={{ padding: '8px' }}>Valor RD$</th>
                 <th style={{ padding: '8px' }}>Acción</th>
               </tr>
             </thead>
             <tbody>
-              {patrimonioList.map((row) => (
+              {activos.map((row) => (
                 <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
-                  <td style={{ padding: '8px', color: textLabel }}>{row.fecha}</td>
-                  <td style={{ padding: '8px' }}><b>{row.nombre}</b></td>
+                  <td style={{ padding: '8px', color: textLabel }}>{row.fecha_registro}</td>
+                  <td style={{ padding: '8px' }}><b>{row.nombre_bien}</b></td>
+                  <td style={{ padding: '8px', color: textLabel }}>{row.tipo_bien || 'Otros'}</td>
                   <td style={{ padding: '8px', color: '#8b5cf6', fontWeight: 'bold' }}>
-                    RD$ {Number(row.valor_dop).toFixed(2)}
+                    RD$ {Number(row.valor_dop).toLocaleString()}
                   </td>
                   <td style={{ padding: '8px' }}>
-                    <button onClick={() => eliminarBien(row.id!)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>
-                      🗑️
+                    <button onClick={() => eliminarActivo(row.id!)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                      <Trash2 size={13} />
                     </button>
                   </td>
                 </tr>
@@ -132,6 +149,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
           </table>
         </div>
       </div>
+
     </div>
   );
 };
