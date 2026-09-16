@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   LayoutDashboard, 
   PieChart, 
@@ -9,7 +9,9 @@ import {
   Settings, 
   Moon, 
   Sun, 
-  LogOut 
+  LogOut,
+  Menu,
+  X
 } from 'lucide-react';
 import { cerrarSesion } from '../services/auth';
 
@@ -28,6 +30,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   modoOscuro,
   setModoOscuro
 }) => {
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   const toggleTema = () => setModoOscuro(prev => !prev);
 
@@ -43,6 +46,11 @@ export const Navigation: React.FC<NavigationProps> = ({
   const bgColor = modoOscuro ? '#111827' : '#ffffff';
   const borderColor = modoOscuro ? '#1f2937' : '#e2e8f0';
 
+  const navegar = (id: string) => {
+    setVistaActual(id);
+    setMenuAbierto(false);
+  };
+
   return (
     <header style={{
       background: bgColor,
@@ -55,27 +63,33 @@ export const Navigation: React.FC<NavigationProps> = ({
       <div style={{
         maxWidth: '1280px',
         margin: '0 auto',
-        padding: '0 24px',
-        height: '64px',
+        padding: '0 16px',
+        minHeight: '64px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        flexWrap: 'wrap'
       }}>
         
-        {/* LOGO + NAVEGACIÓN PRINCIPAL */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+        {/* LOGO + NAVEGACIÓN DESKTOP */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           
-          <div style={{ 
-            fontSize: '15px', 
-            fontWeight: '900', 
-            letterSpacing: '-0.02em', 
-            color: modoOscuro ? '#38bdf8' : '#0f172a',
-            textTransform: 'uppercase'
-          }}>
+          <div 
+            onClick={() => navegar('dashboard')}
+            style={{ 
+              fontSize: '14px', 
+              fontWeight: '900', 
+              letterSpacing: '-0.02em', 
+              color: modoOscuro ? '#38bdf8' : '#0f172a',
+              textTransform: 'uppercase',
+              cursor: 'pointer'
+            }}
+          >
             Gestión Financiera
           </div>
 
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Menú Visible en Pantallas Medianas/Grandes */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '4px' }} className="nav-desktop">
             {menuItems.map((item) => {
               const Icono = item.icon;
               const activo = vistaActual === item.id;
@@ -91,12 +105,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               return (
                 <button
                   key={item.id}
-                  onClick={() => setVistaActual(item.id)}
+                  onClick={() => navegar(item.id)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 14px',
+                    gap: '6px',
+                    padding: '8px 12px',
                     borderRadius: '8px',
                     border: 'none',
                     background: itemBg,
@@ -117,8 +131,8 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         </div>
 
-        {/* ACCIONES DE LA DERECHA */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* ACCIONES DE LA DERECHA & BOTÓN MENÚ MÓVIL */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           
           <button
             onClick={toggleTema}
@@ -141,7 +155,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           </button>
 
           <button
-            onClick={() => setVistaActual('configuracion')}
+            onClick={() => navegar('configuracion')}
             title="Configuración"
             style={{
               display: 'flex',
@@ -166,7 +180,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             <Settings size={16} />
           </button>
 
-          <div style={{ width: '1px', height: '20px', background: borderColor, margin: '0 4px' }} />
+          <div style={{ width: '1px', height: '20px', background: borderColor, margin: '0 2px' }} />
 
           <button
             onClick={async () => {
@@ -178,7 +192,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 12px',
+              padding: '8px 10px',
               borderRadius: '8px',
               border: 'none',
               background: modoOscuro ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2',
@@ -190,12 +204,91 @@ export const Navigation: React.FC<NavigationProps> = ({
             }}
           >
             <LogOut size={15} />
-            <span>Salir</span>
+            <span className="text-salir">Salir</span>
+          </button>
+
+          {/* Botón Menú Hamburguesa para Teléfonos */}
+          <button
+            onClick={() => setMenuAbierto(!menuAbierto)}
+            className="btn-hamburguesa"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: modoOscuro ? '#f8fafc' : '#0f172a',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {menuAbierto ? <X size={22} /> : <Menu size={22} />}
           </button>
 
         </div>
 
+        {/* MENÚ MÓVIL DESPLEGABLE (APARECE AL TOCAR EL BOTÓN EN CELULARES) */}
+        {menuAbierto && (
+          <div style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+            padding: '12px 0 16px 0',
+            borderTop: `1px solid ${borderColor}`,
+            marginTop: '8px'
+          }}>
+            {menuItems.map((item) => {
+              const Icono = item.icon;
+              const activo = vistaActual === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => navegar(item.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: activo ? (modoOscuro ? '#1e293b' : '#0f172a') : 'transparent',
+                    color: activo ? '#ffffff' : (modoOscuro ? '#94a3b8' : '#64748b'),
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Icono size={16} />
+                  <span>{item.nombre}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
       </div>
+
+      {/* ESTILOS CSS INLINE PARA CONTROLAR RESPONSIVIDAD SEGÚN TAMAÑO DE PANTALLA */}
+      <style>{`
+        @media (max-width: 768px) {
+          .nav-desktop {
+            display: none !important;
+          }
+          .btn-hamburguesa {
+            display: flex !important;
+          }
+          .text-salir {
+            display: none !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .btn-hamburguesa {
+            display: none !important;
+          }
+        }
+      `}</style>
     </header>
   );
 };
