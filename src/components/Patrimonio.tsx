@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
+import { WalletsManager } from './WalletsManager';
 import { Trash2 } from 'lucide-react';
 
 interface PatrimonioProps {
@@ -13,10 +14,28 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
   const [nombreBien, setNombreBien] = useState('');
   const [tipoBien, setTipoBien] = useState('Acciones / Inversiones');
   const [valor, setValor] = useState('');
+  const [wallet, setWallet] = useState('');
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
 
   const [activos, setActivos] = useState<any[]>([]);
+  const [walletsDinamicas, setWalletsDinamicas] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
+
+  const cargarWallets = async () => {
+    if (!familiaId) return;
+    const { data } = await supabase
+      .from('wallets')
+      .select('id, nombre, moneda')
+      .eq('familia_id', familiaId)
+      .order('created_at', { ascending: true });
+
+    if (data && data.length > 0) {
+      setWalletsDinamicas(data);
+      if (!wallet) setWallet(data[0].nombre);
+    } else {
+      setWalletsDinamicas([]);
+    }
+  };
 
   const cargarPatrimonio = async () => {
     if (!familiaId) return;
@@ -31,6 +50,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
 
   useEffect(() => {
     cargarPatrimonio();
+    cargarWallets();
   }, [familiaId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +64,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
         nombre_bien: nombreBien.trim(),
         tipo_bien: tipoBien,
         valor_dop: Number(valor),
+        wallet: wallet || 'Efectivo',
         fecha_registro: fecha
       }]);
 
@@ -68,46 +89,63 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
       
-      {/* Formulario de Activos / Acciones */}
-      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
-        <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-          💎 Registrar Activo / Bien / Acciones
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo de Activo</label>
-            <select value={tipoBien} onChange={e => setTipoBien(e.target.value)} style={inputStyle}>
-              <option value="Acciones / Inversiones">📈 Acciones / Inversiones / Puesto de Bolsa</option>
-              <option value="Inmueble / Terreno">🏠 Inmueble / Terreno / Casa</option>
-              <option value="Vehículo">🚗 Vehículo</option>
-              <option value="Otros Activos">💼 Otros Activos de Valor</option>
-            </select>
+      {/* Formulario + Administrador de Cuentas */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
+            💎 Registrar Activo / Bien / Acciones
           </div>
 
-          <div style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Nombre del Bien / Inversión</label>
-            <input type="text" required value={nombreBien} onChange={e => setNombreBien(e.target.value)} placeholder="Ej. Acciones JMMB, Solar Casa, Tesla..." style={inputStyle} />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Valor Estimado (RD$)</label>
-              <input type="number" step="0.01" required value={valor} onChange={e => setValor(e.target.value)} placeholder="0.00" style={inputStyle} />
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo de Activo</label>
+              <select value={tipoBien} onChange={e => setTipoBien(e.target.value)} style={inputStyle}>
+                <option value="Acciones / Inversiones">📈 Acciones / Inversiones / Cooperativa</option>
+                <option value="Inmueble / Terreno">🏠 Inmueble / Terreno / Casa</option>
+                <option value="Vehículo">🚗 Vehículo</option>
+                <option value="Otros Activos">💼 Otros Activos de Valor</option>
+              </select>
             </div>
-            <div>
+
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Nombre del Bien / Inversión</label>
+              <input type="text" required value={nombreBien} onChange={e => setNombreBien(e.target.value)} placeholder="Ej. Acciones Cooperativa, Terreno..." style={inputStyle} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Valor Estimado (RD$)</label>
+                <input type="number" step="0.01" required value={valor} onChange={e => setValor(e.target.value)} placeholder="0.00" style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Entidad Institucional</label>
+                <select value={wallet} onChange={e => setWallet(e.target.value)} style={inputStyle}>
+                  {walletsDinamicas.length === 0 ? (
+                    <option value="Efectivo">Efectivo</option>
+                  ) : (
+                    walletsDinamicas.map(w => (
+                      <option key={w.id} value={w.nombre}>{w.nombre} ({w.moneda})</option>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Fecha Registro</label>
               <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
             </div>
-          </div>
 
-          <button type="submit" disabled={cargando} style={{ width: '100%', background: '#8b5cf6', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
-            {cargando ? 'Guardando...' : 'Registrar Patrimonio'}
-          </button>
-        </form>
+            <button type="submit" disabled={cargando} style={{ width: '100%', background: '#8b5cf6', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
+              {cargando ? 'Guardando...' : 'Registrar Patrimonio'}
+            </button>
+          </form>
+        </div>
+
+        <WalletsManager familiaId={familiaId} onWalletCambio={cargarWallets} />
       </div>
 
-      {/* Historial y Total de Patrimonio */}
+      {/* Historial */}
       <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
           <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
@@ -124,7 +162,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
               <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
                 <th style={{ padding: '8px' }}>Fecha</th>
                 <th style={{ padding: '8px' }}>Bien / Inversión</th>
-                <th style={{ padding: '8px' }}>Tipo</th>
+                <th style={{ padding: '8px' }}>Wallet / Entidad</th>
                 <th style={{ padding: '8px' }}>Valor RD$</th>
                 <th style={{ padding: '8px' }}>Acción</th>
               </tr>
@@ -133,8 +171,8 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
               {activos.map((row) => (
                 <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
                   <td style={{ padding: '8px', color: textLabel }}>{row.fecha_registro}</td>
-                  <td style={{ padding: '8px' }}><b>{row.nombre_bien}</b></td>
-                  <td style={{ padding: '8px', color: textLabel }}>{row.tipo_bien || 'Otros'}</td>
+                  <td style={{ padding: '8px' }}><b>{row.nombre_bien}</b> <br/><small style={{ color: textLabel }}>{row.tipo_bien}</small></td>
+                  <td style={{ padding: '8px' }}><b>{row.wallet || 'Efectivo'}</b></td>
                   <td style={{ padding: '8px', color: '#8b5cf6', fontWeight: 'bold' }}>
                     RD$ {Number(row.valor_dop).toLocaleString()}
                   </td>
