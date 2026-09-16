@@ -88,6 +88,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
       const payload = {
         familia_id: familiaId,
         acreedor: acreedor.trim(),
+        entidad: acreedor.trim(), // Asignado para compatibilidad con ambas columnas
         tipo,
         fecha: fecha || new Date().toISOString().split('T')[0],
         monto_original: orig,
@@ -133,6 +134,8 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
       const nuevasCuotas = Number(target.cuotas_pagadas) + 1;
       const nuevoAtraso = Math.max(0, Number(target.monto_atraso || 0) - valorAbono);
 
+      const nombreEntidad = target.acreedor || target.entidad || 'Préstamo';
+
       const { error: err1 } = await supabase.from('prestamos').update({
         balance_pendiente: nuevoBalance,
         cuotas_pagadas: nuevasCuotas,
@@ -147,7 +150,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
         fecha: new Date().toISOString().split('T')[0],
         tipo: 'Gasto',
         categoria: 'Préstamos / Deudas',
-        concepto: `Pago cuota a ${target.acreedor}`,
+        concepto: `Pago cuota a ${nombreEntidad}`,
         monto_dop: valorAbono,
         monto_original: valorAbono,
         moneda: 'DOP',
@@ -157,7 +160,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
       if (err2) throw err2;
 
-      alert(`¡Pago de RD$ ${valorAbono.toLocaleString()} registrado con éxito!`);
+      alert(`¡Pago de RD$ ${valorAbono.toLocaleString()} registrado con éxito desde ${walletPago}!`);
       setMontoPago('');
       await cargarPrestamos();
     } catch (err: any) {
@@ -296,7 +299,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                   {prestamos.length === 0 && <option value="">No hay préstamos activos</option>}
                   {prestamos.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.acreedor} (Pendiente: RD$ {Number(p.balance_pendiente).toLocaleString()})
+                      {p.acreedor || p.entidad} (Pendiente: RD$ {Number(p.balance_pendiente).toLocaleString()})
                     </option>
                   ))}
                 </select>
@@ -350,7 +353,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
               <div key={p.id} style={{ background: bgInput, border: `1px solid ${p.monto_atraso > 0 ? '#ef444488' : borderCard}`, borderRadius: '10px', padding: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <span style={{ fontSize: '12px', fontWeight: '800' }}>
-                    {p.tipo === 'Por Pagar' ? '🔴' : '🟢'} {p.acreedor} <small style={{ fontWeight: 'normal', color: textLabel }}>({p.wallet})</small>
+                    {p.tipo === 'Por Pagar' ? '🔴' : '🟢'} {p.acreedor || p.entidad} <small style={{ fontWeight: 'normal', color: textLabel }}>({p.wallet})</small>
                   </span>
                   <span style={{ fontSize: '10px', background: p.estado === 'Liquidado' ? '#10b98122' : borderCard, color: p.estado === 'Liquidado' ? '#10b981' : textLabel, padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
                     {p.estado}
