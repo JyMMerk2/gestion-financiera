@@ -32,7 +32,7 @@ export default function App() {
     }
   }, [modoOscuro]);
 
-  const [mesSeleccionado, setMesSeleccionado] = useState(() => {
+  const [mesSeleccionado] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
@@ -121,7 +121,6 @@ export default function App() {
           <Presupuesto
             familiaId={familiaIdSegura}
             mesSeleccionado={mesSeleccionado}
-            setMesSeleccionado={setMesSeleccionado}
           />
         )}
 
