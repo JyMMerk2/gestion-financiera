@@ -17,11 +17,6 @@ export default function App() {
   const [seccionActual, setSeccionActual] = useState<'dashboard' | 'presupuesto' | 'ahorros' | 'patrimonio' | 'prestamos' | 'metas' | 'configuracion'>('dashboard');
 
   const [modoOscuro, setModoOscuro] = useState(() => localStorage.getItem('theme') === 'dark');
-  const [moneda, setMoneda] = useState<'RD$' | 'USD'>(() => (localStorage.getItem('moneda') as 'RD$' | 'USD') || 'RD$');
-
-  useEffect(() => {
-    localStorage.setItem('moneda', moneda);
-  }, [moneda]);
 
   useEffect(() => {
     if (modoOscuro) {
@@ -151,7 +146,7 @@ export default function App() {
         {seccionActual === 'metas' && (
           <Metas
             familiaId={familiaIdSegura}
-            moneda={moneda}
+            perfil={perfil}
           />
         )}
 
@@ -159,8 +154,6 @@ export default function App() {
           <Configuracion 
             perfil={perfil} 
             onPerfilActualizado={verificarSesion}
-            moneda={moneda}
-            setMoneda={setMoneda}
           />
         )}
       </main>
