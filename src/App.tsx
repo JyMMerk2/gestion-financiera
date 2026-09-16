@@ -89,6 +89,9 @@ export default function App() {
     return <AuthModal onSuccess={verificarSesion} />;
   }
 
+  // Extraer el identificador de la familia asegurando un respaldo seguro
+  const familiaIdSegura = perfil?.familia_id || perfil?.familias?.id || 'general';
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -118,33 +121,33 @@ export default function App() {
 
         {seccionActual === 'presupuesto' && (
           <Presupuesto
-            familiaId={perfil.familia_id}
+            familiaId={familiaIdSegura}
             mesSeleccionado={mesSeleccionado}
           />
         )}
 
         {seccionActual === 'ahorros' && (
           <Ahorros
-            familiaId={perfil.familia_id}
+            familiaId={familiaIdSegura}
             mesSeleccionado={mesSeleccionado}
           />
         )}
 
         {seccionActual === 'patrimonio' && (
           <Patrimonio
-            familiaId={perfil.familia_id}
+            familiaId={familiaIdSegura}
           />
         )}
 
         {seccionActual === 'prestamos' && (
           <Prestamos
-            familiaId={perfil.familia_id}
+            familiaId={familiaIdSegura}
           />
         )}
 
         {seccionActual === 'metas' && (
           <Metas
-            familiaId={perfil.familia_id}
+            familiaId={familiaIdSegura}
           />
         )}
 
