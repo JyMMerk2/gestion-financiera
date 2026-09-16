@@ -16,18 +16,24 @@ interface ItemMeta {
   completado: boolean;
   precio?: number;
   enlace?: string;
+  moneda_item?: string;
 }
 
-export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
+export const Metas: React.FC<MetasProps> = ({ familiaId, moneda: monedaGlobal = 'RD$' }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
 
   const [titulo, setTitulo] = useState('');
   const [categoria, setCategoria] = useState<string>('Solar / Casa');
   const [precio, setPrecio] = useState('');
   const [enlace, setEnlace] = useState('');
+  const [monedaLocal, setMonedaLocal] = useState<'RD$' | 'USD'>(monedaGlobal);
 
   const [metas, setMetas] = useState<ItemMeta[]>([]);
   const [cargando, setCargando] = useState(false);
+
+  useEffect(() => {
+    setMonedaLocal(monedaGlobal);
+  }, [monedaGlobal]);
 
   const cargarMetas = async () => {
     if (!familiaId) return;
@@ -122,8 +128,20 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
       
       {/* Formulario */}
       <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
-        <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-          🎯 Registro de Objetivos y Compras
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
+            🎯 Registro de Objetivos y Compras
+          </span>
+
+          {/* Selector Rápido de Moneda */}
+          <select
+            value={monedaLocal}
+            onChange={(e) => setMonedaLocal(e.target.value as 'RD$' | 'USD')}
+            style={{ ...inputStyle, width: '80px', padding: '2px 6px', fontSize: '10px', fontWeight: 'bold' }}
+          >
+            <option value="RD$">RD$</option>
+            <option value="USD">USD $</option>
+          </select>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -143,7 +161,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Precio Estimado ({moneda})</label>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Precio Estimado ({monedaLocal})</label>
               <input type="number" step="0.01" value={precio} onChange={e => setPrecio(e.target.value)} placeholder="0.00" style={inputStyle} />
             </div>
             <div>
@@ -173,7 +191,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
               <span>{calcularProgreso(esCategoriaCasa)}%</span>
             </div>
             <div style={{ fontSize: '10px', color: textLabel, marginBottom: '6px' }}>
-              Total Est.: <b>{moneda} {calcularTotalEstimado(esCategoriaCasa).toLocaleString()}</b>
+              Total Est.: <b>{monedaLocal} {calcularTotalEstimado(esCategoriaCasa).toLocaleString()}</b>
             </div>
             <div style={{ width: '100%', height: '6px', background: borderCard, borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
               <div style={{ width: `${calcularProgreso(esCategoriaCasa)}%`, height: '100%', background: '#0284c7', transition: 'width 0.3s' }} />
@@ -192,7 +210,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {item.precio ? (
                     <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#0284c7' }}>
-                      {moneda} {Number(item.precio).toLocaleString()}
+                      {monedaLocal} {Number(item.precio).toLocaleString()}
                     </span>
                   ) : null}
 
@@ -217,7 +235,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
               <span>{calcularProgreso(esCategoriaBebe)}%</span>
             </div>
             <div style={{ fontSize: '10px', color: textLabel, marginBottom: '6px' }}>
-              Total Est.: <b>{moneda} {calcularTotalEstimado(esCategoriaBebe).toLocaleString()}</b>
+              Total Est.: <b>{monedaLocal} {calcularTotalEstimado(esCategoriaBebe).toLocaleString()}</b>
             </div>
             <div style={{ width: '100%', height: '6px', background: borderCard, borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
               <div style={{ width: `${calcularProgreso(esCategoriaBebe)}%`, height: '100%', background: '#ec4899', transition: 'width 0.3s' }} />
@@ -236,7 +254,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {item.precio ? (
                     <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#ec4899' }}>
-                      {moneda} {Number(item.precio).toLocaleString()}
+                      {monedaLocal} {Number(item.precio).toLocaleString()}
                     </span>
                   ) : null}
 
