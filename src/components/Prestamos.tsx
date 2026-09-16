@@ -89,9 +89,9 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
         familia_id: familiaId,
         acreedor: acreedor.trim(),
         entidad: acreedor.trim(),
-        tipo,
+        tipo, // 'Por Pagar' o 'Por Cobrar'
         fecha: fecha || new Date().toISOString().split('T')[0],
-        monto: pend,              // Compatible con columna 'monto'
+        monto: pend,
         monto_original: orig,
         monto_dop: pend,
         balance_pendiente: pend,
@@ -131,8 +131,8 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     setCargando(true);
     try {
       const valorAbono = Number(montoPago);
-      const nuevoBalance = Math.max(0, Number(target.balance_pendiente) - valorAbono);
-      const nuevasCuotas = Number(target.cuotas_pagadas) + 1;
+      const nuevoBalance = Math.max(0, Number(target.balance_pendiente ?? target.monto ?? 0) - valorAbono);
+      const nuevasCuotas = Number(target.cuotas_pagadas || 0) + 1;
       const nuevoAtraso = Math.max(0, Number(target.monto_atraso || 0) - valorAbono);
 
       const nombreEntidad = target.acreedor || target.entidad || 'Préstamo';
@@ -183,7 +183,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   };
 
   const totalAtrasos = prestamos
-    .filter(p => p.tipo === 'Por Pagar')
+    .filter(p => p.tipo === 'Por Pagar' || p.tipo === 'Deuda')
     .reduce((acc, curr) => acc + Number(curr.monto_atraso || 0), 0);
 
   return (
@@ -355,7 +355,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
               <div key={p.id} style={{ background: bgInput, border: `1px solid ${p.monto_atraso > 0 ? '#ef444488' : borderCard}`, borderRadius: '10px', padding: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <span style={{ fontSize: '12px', fontWeight: '800' }}>
-                    {p.tipo === 'Por Pagar' ? '🔴' : '🟢'} {p.acreedor || p.entidad} <small style={{ fontWeight: 'normal', color: textLabel }}>({p.wallet})</small>
+                    {p.tipo === 'Por Pagar' || p.tipo === 'Deuda' ? '🔴' : '🟢'} {p.acreedor || p.entidad} <small style={{ fontWeight: 'normal', color: textLabel }}>({p.wallet})</small>
                   </span>
                   <span style={{ fontSize: '10px', background: p.estado === 'Liquidado' ? '#10b98122' : borderCard, color: p.estado === 'Liquidado' ? '#10b981' : textLabel, padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
                     {p.estado}
@@ -364,7 +364,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '10px', color: textLabel, marginBottom: '8px' }}>
                   <div>Original: <b style={{ color: textPrimary }}>RD$ {Number(p.monto_original ?? p.monto ?? 0).toLocaleString()}</b></div>
-                  <div>Pendiente: <b style={{ color: p.tipo === 'Por Pagar' ? '#ef4444' : '#10b981' }}>RD$ {Number(p.balance_pendiente ?? p.monto ?? 0).toLocaleString()}</b></div>
+                  <div>Pendiente: <b style={{ color: p.tipo === 'Por Pagar' || p.tipo === 'Deuda' ? '#ef4444' : '#10b981' }}>RD$ {Number(p.balance_pendiente ?? p.monto ?? 0).toLocaleString()}</b></div>
                   <div>Cuotas: <b>{p.cuotas_pagadas ?? 0} / {p.cuotas_totales ?? 1}</b></div>
                 </div>
 
