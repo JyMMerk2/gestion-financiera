@@ -10,7 +10,7 @@ interface MetasProps {
 interface ItemMeta {
   id?: string;
   familia_id: string;
-  categoria: 'Solar / Casa' | 'Bebé 2027' | 'General';
+  categoria: string;
   titulo: string;
   completado: boolean;
   precio?: number;
@@ -21,7 +21,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
 
   const [titulo, setTitulo] = useState('');
-  const [categoria, setCategoria] = useState<'Solar / Casa' | 'Bebé 2027' | 'General'>('Solar / Casa');
+  const [categoria, setCategoria] = useState<string>('Solar / Casa');
   const [precio, setPrecio] = useState('');
   const [enlace, setEnlace] = useState('');
 
@@ -80,16 +80,20 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
     cargarMetas();
   };
 
-  const calcularProgreso = (cat: string) => {
-    const items = metas.filter(m => m.categoria === cat);
+  // Coincidencia flexible de categorías para recuperar registros previos
+  const esCategoriaCasa = (cat: string) => cat.includes('Solar') || cat.includes('Casa');
+  const esCategoriaBebe = (cat: string) => cat.includes('Bebé') || cat.includes('2027');
+
+  const calcularProgreso = (filtroFn: (cat: string) => boolean) => {
+    const items = metas.filter(m => filtroFn(m.categoria));
     if (items.length === 0) return 0;
     const listos = items.filter(m => m.completado).length;
     return Math.round((listos / items.length) * 100);
   };
 
-  const calcularTotalEstimado = (cat: string) => {
+  const calcularTotalEstimado = (filtroFn: (cat: string) => boolean) => {
     return metas
-      .filter(m => m.categoria === cat)
+      .filter(m => filtroFn(m.categoria))
       .reduce((acc, curr) => acc + (Number(curr.precio) || 0), 0);
   };
 
@@ -105,7 +109,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '8px' }}>
             <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Categoría / Proyecto</label>
-            <select value={categoria} onChange={e => setCategoria(e.target.value as any)} style={inputStyle}>
+            <select value={categoria} onChange={e => setCategoria(e.target.value)} style={inputStyle}>
               <option value="Solar / Casa" style={{ background: bgCard, color: textPrimary }}>🏡 Solar & Construcción Casa</option>
               <option value="Bebé 2027" style={{ background: bgCard, color: textPrimary }}>👶 Preparativos Bebé (Marzo 2027)</option>
               <option value="General" style={{ background: bgCard, color: textPrimary }}>📌 General</option>
@@ -146,16 +150,16 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
           <div style={{ background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '10px', padding: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', marginBottom: '2px' }}>
               <span>🏡 Solar & Construcción</span>
-              <span>{calcularProgreso('Solar / Casa')}%</span>
+              <span>{calcularProgreso(esCategoriaCasa)}%</span>
             </div>
             <div style={{ fontSize: '10px', color: textLabel, marginBottom: '6px' }}>
-              Total Est.: <b>RD$ {calcularTotalEstimado('Solar / Casa').toLocaleString()}</b>
+              Total Est.: <b>RD$ {calcularTotalEstimado(esCategoriaCasa).toLocaleString()}</b>
             </div>
             <div style={{ width: '100%', height: '6px', background: borderCard, borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
-              <div style={{ width: `${calcularProgreso('Solar / Casa')}%`, height: '100%', background: '#0284c7', transition: 'width 0.3s' }} />
+              <div style={{ width: `${calcularProgreso(esCategoriaCasa)}%`, height: '100%', background: '#0284c7', transition: 'width 0.3s' }} />
             </div>
 
-            {metas.filter(m => m.categoria === 'Solar / Casa').map(item => (
+            {metas.filter(m => esCategoriaCasa(m.categoria)).map(item => (
               <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${borderCard}` }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}>
                   <input type="checkbox" checked={item.completado} onChange={() => toggleEstado(item.id!, item.completado)} />
@@ -185,16 +189,16 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
           <div style={{ background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '10px', padding: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', marginBottom: '2px' }}>
               <span>👶 Preparativos Bebé (Marzo 2027)</span>
-              <span>{calcularProgreso('Bebé 2027')}%</span>
+              <span>{calcularProgreso(esCategoriaBebe)}%</span>
             </div>
             <div style={{ fontSize: '10px', color: textLabel, marginBottom: '6px' }}>
-              Total Est.: <b>RD$ {calcularTotalEstimado('Bebé 2027').toLocaleString()}</b>
+              Total Est.: <b>RD$ {calcularTotalEstimado(esCategoriaBebe).toLocaleString()}</b>
             </div>
             <div style={{ width: '100%', height: '6px', background: borderCard, borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
-              <div style={{ width: `${calcularProgreso('Bebé 2027')}%`, height: '100%', background: '#ec4899', transition: 'width 0.3s' }} />
+              <div style={{ width: `${calcularProgreso(esCategoriaBebe)}%`, height: '100%', background: '#ec4899', transition: 'width 0.3s' }} />
             </div>
 
-            {metas.filter(m => m.categoria === 'Bebé 2027').map(item => (
+            {metas.filter(m => esCategoriaBebe(m.categoria)).map(item => (
               <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${borderCard}` }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}>
                   <input type="checkbox" checked={item.completado} onChange={() => toggleEstado(item.id!, item.completado)} />
