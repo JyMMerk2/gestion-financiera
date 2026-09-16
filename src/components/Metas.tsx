@@ -8,13 +8,17 @@ interface MetasProps {
   moneda?: 'RD$' | 'USD';
 }
 
-export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
-  // ... resto del componente ...
-  
-  // En el renderizado del total y precios:
-  // {moneda} {Number(item.precio).toLocaleString()}
+interface ItemMeta {
+  id?: string;
+  familia_id: string;
+  categoria: string;
+  titulo: string;
+  completado: boolean;
+  precio?: number;
+  enlace?: string;
+}
 
-export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
+export const Metas: React.FC<MetasProps> = ({ familiaId, moneda = 'RD$' }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
 
   const [titulo, setTitulo] = useState('');
@@ -28,7 +32,6 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
   const cargarMetas = async () => {
     if (!familiaId) return;
 
-    // Consulta estricta por tu familia única
     const { data, error } = await supabase
       .from('metas')
       .select('*')
@@ -46,6 +49,15 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
     cargarMetas();
   }, [familiaId]);
 
+  const formatearUrl = (url: string) => {
+    if (!url) return '';
+    const cleanUrl = url.trim();
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      return cleanUrl;
+    }
+    return `https://${cleanUrl}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!titulo.trim() || !familiaId) return;
@@ -53,12 +65,12 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
     setCargando(true);
     try {
       const payload = {
-        familia_id: familiaId, // ID único de tu familia
+        familia_id: familiaId,
         categoria,
         titulo: titulo.trim(),
         completado: false,
         precio: precio ? Number(precio) : 0,
-        enlace: enlace.trim()
+        enlace: enlace.trim() ? formatearUrl(enlace) : ''
       };
 
       const { error } = await supabase.from('metas').insert([payload]);
@@ -131,12 +143,12 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Precio Estimado (RD$ / USD)</label>
+              <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Precio Estimado ({moneda})</label>
               <input type="number" step="0.01" value={precio} onChange={e => setPrecio(e.target.value)} placeholder="0.00" style={inputStyle} />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Link / Enlace de la Tienda</label>
-              <input type="url" value={enlace} onChange={e => setEnlace(e.target.value)} placeholder="https://..." style={inputStyle} />
+              <input type="text" value={enlace} onChange={e => setEnlace(e.target.value)} placeholder="https://amazon.com/..." style={inputStyle} />
             </div>
           </div>
 
@@ -161,7 +173,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
               <span>{calcularProgreso(esCategoriaCasa)}%</span>
             </div>
             <div style={{ fontSize: '10px', color: textLabel, marginBottom: '6px' }}>
-              Total Est.: <b>RD$ {calcularTotalEstimado(esCategoriaCasa).toLocaleString()}</b>
+              Total Est.: <b>{moneda} {calcularTotalEstimado(esCategoriaCasa).toLocaleString()}</b>
             </div>
             <div style={{ width: '100%', height: '6px', background: borderCard, borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
               <div style={{ width: `${calcularProgreso(esCategoriaCasa)}%`, height: '100%', background: '#0284c7', transition: 'width 0.3s' }} />
@@ -180,12 +192,12 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {item.precio ? (
                     <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#0284c7' }}>
-                      RD$ {Number(item.precio).toLocaleString()}
+                      {moneda} {Number(item.precio).toLocaleString()}
                     </span>
                   ) : null}
 
                   {item.enlace ? (
-                    <a href={item.enlace} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', display: 'flex', alignItems: 'center' }} title="Ir a la tienda">
+                    <a href={formatearUrl(item.enlace)} target="_blank" rel="noreferrer noopener" style={{ color: '#38bdf8', display: 'flex', alignItems: 'center' }} title="Ir a la tienda">
                       <ExternalLink size={13} />
                     </a>
                   ) : null}
@@ -205,7 +217,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
               <span>{calcularProgreso(esCategoriaBebe)}%</span>
             </div>
             <div style={{ fontSize: '10px', color: textLabel, marginBottom: '6px' }}>
-              Total Est.: <b>RD$ {calcularTotalEstimado(esCategoriaBebe).toLocaleString()}</b>
+              Total Est.: <b>{moneda} {calcularTotalEstimado(esCategoriaBebe).toLocaleString()}</b>
             </div>
             <div style={{ width: '100%', height: '6px', background: borderCard, borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
               <div style={{ width: `${calcularProgreso(esCategoriaBebe)}%`, height: '100%', background: '#ec4899', transition: 'width 0.3s' }} />
@@ -224,12 +236,12 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {item.precio ? (
                     <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#ec4899' }}>
-                      RD$ {Number(item.precio).toLocaleString()}
+                      {moneda} {Number(item.precio).toLocaleString()}
                     </span>
                   ) : null}
 
                   {item.enlace ? (
-                    <a href={item.enlace} target="_blank" rel="noopener noreferrer" style={{ color: '#ec4899', display: 'flex', alignItems: 'center' }} title="Ir a la tienda">
+                    <a href={formatearUrl(item.enlace)} target="_blank" rel="noreferrer noopener" style={{ color: '#ec4899', display: 'flex', alignItems: 'center' }} title="Ir a la tienda">
                       <ExternalLink size={13} />
                     </a>
                   ) : null}
