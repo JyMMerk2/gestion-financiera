@@ -119,7 +119,6 @@ export default function App() {
             onLogout={handleLogout}
             onNavigate={(sec) => setSeccionActual(sec as any)}
             modoOscuro={modoOscuro}
-            moneda={moneda}
           />
         )}
 
@@ -127,7 +126,6 @@ export default function App() {
           <Presupuesto
             familiaId={familiaIdSegura}
             mesSeleccionado={mesSeleccionado}
-            moneda={moneda}
           />
         )}
 
@@ -135,21 +133,18 @@ export default function App() {
           <Ahorros
             familiaId={familiaIdSegura}
             mesSeleccionado={mesSeleccionado}
-            moneda={moneda}
           />
         )}
 
         {seccionActual === 'patrimonio' && (
           <Patrimonio
             familiaId={familiaIdSegura}
-            moneda={moneda}
           />
         )}
 
         {seccionActual === 'prestamos' && (
           <Prestamos
             familiaId={familiaIdSegura}
-            moneda={moneda}
           />
         )}
 
