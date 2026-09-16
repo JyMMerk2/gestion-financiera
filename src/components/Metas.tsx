@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, CheckSquare, Square, Trash2 } from 'lucide-react';
 
 interface MetasProps {
   familiaId: string;
@@ -80,7 +80,6 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
     cargarMetas();
   };
 
-  // Coincidencia flexible de categorías para recuperar registros previos
   const esCategoriaCasa = (cat: string) => cat.includes('Solar') || cat.includes('Casa');
   const esCategoriaBebe = (cat: string) => cat.includes('Bebé') || cat.includes('2027');
 
@@ -110,15 +109,15 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
           <div style={{ marginBottom: '8px' }}>
             <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Categoría / Proyecto</label>
             <select value={categoria} onChange={e => setCategoria(e.target.value)} style={inputStyle}>
-              <option value="Solar / Casa" style={{ background: bgCard, color: textPrimary }}>🏡 Solar & Construcción Casa</option>
-              <option value="Bebé 2027" style={{ background: bgCard, color: textPrimary }}>👶 Preparativos Bebé (Marzo 2027)</option>
-              <option value="General" style={{ background: bgCard, color: textPrimary }}>📌 General</option>
+              <option value="Solar / Casa" style={{ background: bgCard, color: textPrimary }}>Solar & Construcción Casa</option>
+              <option value="Bebé 2027" style={{ background: bgCard, color: textPrimary }}>Preparativos Bebé (Marzo 2027)</option>
+              <option value="General" style={{ background: bgCard, color: textPrimary }}>General</option>
             </select>
           </div>
 
           <div style={{ marginBottom: '8px' }}>
             <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Objetivo / Artículo</label>
-            <input type="text" required value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ej. Play Yard, Coche, Muro perimetral..." style={inputStyle} />
+            <input type="text" required value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ej. Play Yard, Cortar árboles, Cuna..." style={inputStyle} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
@@ -138,7 +137,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
         </form>
       </div>
 
-      {/* Lista de Objetivos */}
+      {/* Lista de Objetivos Activos */}
       <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
         <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
           📋 Lista de Objetivos Activos
@@ -161,10 +160,13 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
 
             {metas.filter(m => esCategoriaCasa(m.categoria)).map(item => (
               <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${borderCard}` }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}>
-                  <input type="checkbox" checked={item.completado} onChange={() => toggleEstado(item.id!, item.completado)} />
-                  {item.titulo}
-                </label>
+                <div 
+                  onClick={() => toggleEstado(item.id!, item.completado)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}
+                >
+                  {item.completado ? <CheckSquare size={16} color="#10b981" /> : <Square size={16} color={textLabel} />}
+                  <span>{item.titulo}</span>
+                </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {item.precio ? (
@@ -179,7 +181,9 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
                     </a>
                   ) : null}
 
-                  <button onClick={() => eliminarMeta(item.id!)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '10px' }}>🗑️</button>
+                  <button onClick={() => eliminarMeta(item.id!)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444' }}>
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -200,10 +204,13 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
 
             {metas.filter(m => esCategoriaBebe(m.categoria)).map(item => (
               <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${borderCard}` }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}>
-                  <input type="checkbox" checked={item.completado} onChange={() => toggleEstado(item.id!, item.completado)} />
-                  {item.titulo}
-                </label>
+                <div 
+                  onClick={() => toggleEstado(item.id!, item.completado)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', cursor: 'pointer', textDecoration: item.completado ? 'line-through' : 'none', color: item.completado ? textLabel : textPrimary }}
+                >
+                  {item.completado ? <CheckSquare size={16} color="#10b981" /> : <Square size={16} color={textLabel} />}
+                  <span>{item.titulo}</span>
+                </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {item.precio ? (
@@ -218,7 +225,9 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
                     </a>
                   ) : null}
 
-                  <button onClick={() => eliminarMeta(item.id!)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '10px' }}>🗑️</button>
+                  <button onClick={() => eliminarMeta(item.id!)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444' }}>
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               </div>
             ))}
