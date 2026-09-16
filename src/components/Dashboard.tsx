@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { TransaccionPresupuesto, RegistroPatrimonio, RegistroPrestamo } from '../types';
+import { TransaccionPresupuesto, RegistroPatrimonio } from '../types';
 
 interface DashboardProps {
   perfil: any;
@@ -49,22 +49,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
   };
 
   useEffect(() => {
-    if (!perfil?.familia_id) return;
+    const familiaId = perfil?.familia_id || perfil?.familias?.id;
+    if (!familiaId) return;
 
     const cargarMetricas = async () => {
+      // 1. Cargar Wallets desde la tabla 'wallets'
+      const { data: wallData } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('familia_id', familiaId);
+
+      let mapWallets: Record<string, number> = {};
+      if (wallData && wallData.length > 0) {
+        wallData.forEach((w: any) => {
+          mapWallets[w.nombre] = Number(w.balance || 0);
+        });
+      }
+
+      // 2. Cargar Presupuesto y sumarlo a las Wallets
       const { data: presData } = await supabase
         .from('presupuesto')
         .select('*')
-        .eq('familia_id', perfil.familia_id);
+        .eq('familia_id', familiaId);
 
       let ing = 0, gas = 0;
-      let wallets: Record<string, number> = {};
       let ultimas: TransaccionPresupuesto[] = [];
 
       if (presData) {
         presData.forEach((row: TransaccionPresupuesto) => {
           const factor = row.tipo === 'Ingreso' ? 1 : -1;
-          wallets[row.wallet] = (wallets[row.wallet] || 0) + (row.monto_dop * factor);
+          const wNombre = row.wallet || 'Efectivo';
+          mapWallets[wNombre] = (mapWallets[wNombre] || 0) + (Number(row.monto_dop) * factor);
 
           if (row.fecha.startsWith(mesSeleccionado)) {
             if (row.tipo === 'Ingreso') ing += Number(row.monto_dop);
@@ -77,34 +92,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
       setIngresosMes(ing);
       setGastosMes(gas);
       setAhorroMes(ing - gas);
-      setWalletsBalances(wallets);
+      setWalletsBalances(mapWallets);
       setUltimasTransacciones(ultimas.slice(-5).reverse());
 
+      // 3. Cargar Préstamos y Deudas
       const { data: prestData } = await supabase
         .from('prestamos')
         .select('*')
-        .eq('familia_id', perfil.familia_id);
+        .eq('familia_id', familiaId);
 
       let deudas = 0;
       if (prestData) {
-        prestData.forEach((p: RegistroPrestamo) => {
-          if (p.tipo === 'Nueva Deuda') deudas += Number(p.monto);
-          else if (p.tipo === 'Pago Cuota') deudas = Math.max(0, deudas - Number(p.monto));
+        prestData.forEach((p: any) => {
+          const esDeuda = p.tipo === 'Por Pagar' || p.tipo === 'Deuda' || !p.tipo;
+          if (esDeuda && p.estado !== 'Liquidado') {
+            const pend = p.balance_pendiente ?? p.monto ?? p.monto_original ?? 0;
+            deudas += Number(pend);
+          }
         });
       }
       setDeudasTotales(deudas);
 
+      // 4. Cargar Patrimonio
       const { data: patData } = await supabase
         .from('patrimonio')
         .select('*')
-        .eq('familia_id', perfil.familia_id);
+        .eq('familia_id', familiaId);
 
       let bienes = 0;
       if (patData) {
-        patData.forEach((b: RegistroPatrimonio) => bienes += Number(b.valor_dop));
+        patData.forEach((b: RegistroPatrimonio) => bienes += Number(b.valor_dop || 0));
       }
 
-      const totalWallets = Object.values(wallets).reduce((a, b) => a + b, 0);
+      const totalWallets = Object.values(mapWallets).reduce((a, b) => a + b, 0);
       setDisponibleReal(totalWallets);
       setPatrimonioNeto(totalWallets + bienes - deudas);
     };
@@ -171,7 +191,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
 
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ fontSize: '22px', fontWeight: '900', margin: 0, color: textPrimary }}>
-            Hola, {perfil?.nombre_usuario?.toUpperCase() || perfil?.email?.split('@')[0]?.toUpperCase() || 'USUARIO'}
+            Hola, {perfil?.nombre_usuario?.toUpperCase() || perfil?.nombre?.toUpperCase() || perfil?.email?.split('@')[0]?.toUpperCase() || 'USUARIO'}
           </h1>
           <p style={{ fontSize: '11px', color: textSecondary, margin: '2px 0 0 0', fontWeight: '600' }}>
             {perfil?.familias?.nombre || 'Familia'} • Código: <b style={{ color: '#38bdf8' }}>{perfil?.familias?.codigo_invitacion || 'N/A'}</b>
@@ -236,7 +256,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
 
       {/* Bloque 3: Indicadores Generales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px' }}>
-        <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #f59e0b' }}>
+        <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #ef4444' }}>
           <div style={{ fontSize: '9px', fontWeight: '800', color: textSecondary }}>DEUDAS PENDIENTES</div>
           <div style={{ fontSize: '16px', fontWeight: '800', color: textPrimary, marginTop: '4px', ...blurStyle }}>RD$ {deudasTotales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
         </div>
@@ -255,7 +275,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
         {Object.keys(walletsBalances).length === 0 ? (
           <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '12px', padding: '12px', color: textSecondary, fontSize: '12px', gridColumn: '1 / -1' }}>
-            No hay transacciones registradas para calcular wallets.
+            No hay transacciones ni wallets registradas.
           </div>
         ) : (
           Object.keys(walletsBalances).map((wKey) => (
@@ -272,3 +292,5 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
     </div>
   );
 };
+
+export default Dashboard;
