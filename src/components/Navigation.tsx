@@ -5,6 +5,7 @@ import {
   PiggyBank, 
   Building2, 
   CreditCard, 
+  Target,
   Settings, 
   Moon, 
   Sun, 
@@ -36,6 +37,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'ahorros', nombre: 'Ahorros', icon: PiggyBank },
     { id: 'patrimonio', nombre: 'Patrimonio', icon: Building2 },
     { id: 'prestamos', nombre: 'Préstamos', icon: CreditCard },
+    { id: 'metas', nombre: 'Metas', icon: Target },
   ];
 
   const bgColor = modoOscuro ? '#111827' : '#ffffff';
