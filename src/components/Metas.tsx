@@ -30,13 +30,17 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
 
   const cargarMetas = async () => {
     if (!familiaId) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('metas')
       .select('*')
       .eq('familia_id', familiaId)
       .order('created_at', { ascending: true });
 
-    if (data) setMetas(data);
+    if (error) {
+      console.error('Error al cargar metas:', error);
+    } else if (data) {
+      setMetas(data);
+    }
   };
 
   useEffect(() => {
@@ -49,21 +53,27 @@ export const Metas: React.FC<MetasProps> = ({ familiaId }) => {
 
     setCargando(true);
     try {
-      await supabase.from('metas').insert([{
-        familia_id: familiaId,
+      const payload = {
+        familia_id: familiaId || 'general',
         categoria,
         titulo: titulo.trim(),
         completado: false,
         precio: precio ? Number(precio) : 0,
         enlace: enlace.trim()
-      }]);
+      };
 
-      setTitulo('');
-      setPrecio('');
-      setEnlace('');
-      cargarMetas();
+      const { error } = await supabase.from('metas').insert([payload]);
+
+      if (error) {
+        alert('Error de Supabase: ' + error.message);
+      } else {
+        setTitulo('');
+        setPrecio('');
+        setEnlace('');
+        await cargarMetas();
+      }
     } catch (err: any) {
-      alert('Error guardando meta: ' + err.message);
+      alert('Error inesperado: ' + err.message);
     } finally {
       setCargando(false);
     }
