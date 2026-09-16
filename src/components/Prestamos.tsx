@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { WalletsManager } from './WalletsManager';
-import { AlertCircle, Trash2, Plus, CreditCard } from 'lucide-react';
+import { AlertCircle, Trash2, Plus } from 'lucide-react';
 
 interface PrestamosProps {
   familiaId: string;
@@ -11,7 +11,6 @@ interface PrestamosProps {
 export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
 
-  // Pestaña del formulario (Registro de Deuda vs Registro de Pago)
   const [modoFormulario, setModoFormulario] = useState<'registrar' | 'pagar'>('registrar');
 
   // Campos Registro
@@ -52,17 +51,19 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
   const cargarPrestamos = async () => {
     if (!familiaId) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('prestamos')
       .select('*')
       .eq('familia_id', familiaId)
       .order('created_at', { ascending: false });
 
-    if (data && data.length > 0) {
+    if (error) {
+      console.error('Error al cargar préstamos:', error);
+    } else if (data) {
       setPrestamos(data);
-      if (!prestamoSeleccionadoId) setPrestamoSeleccionadoId(data[0].id);
-    } else {
-      setPrestamos([]);
+      if (data.length > 0 && !prestamoSeleccionadoId) {
+        setPrestamoSeleccionadoId(data[0].id);
+      }
     }
   };
 
@@ -73,33 +74,44 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!acreedor.trim() || !familiaId) return;
+    if (!acreedor.trim() || !familiaId) {
+      alert('Ingresa el nombre del Banco, Entidad o Persona.');
+      return;
+    }
 
     setCargando(true);
     try {
       const orig = Number(montoOriginal) || 0;
       const pend = balancePendiente ? Number(balancePendiente) : orig;
 
-      await supabase.from('prestamos').insert([{
+      const payload = {
         familia_id: familiaId,
         acreedor: acreedor.trim(),
         tipo,
         monto_original: orig,
+        monto_dop: pend,
         balance_pendiente: pend,
         cuotas_totales: Number(cuotasTotales) || 1,
         cuotas_pagadas: Number(cuotasPagadas) || 0,
         monto_atraso: Number(montoAtraso) || 0,
         wallet: wallet || (walletsDinamicas[0]?.nombre ?? 'Efectivo'),
-        estado: 'Activo'
-      }]);
+        estado: pend === 0 ? 'Liquidado' : 'Activo'
+      };
 
-      setAcreedor('');
-      setMontoOriginal('');
-      setBalancePendiente('');
-      setMontoAtraso('0');
-      await cargarPrestamos();
+      const { error } = await supabase.from('prestamos').insert([payload]);
+
+      if (error) {
+        alert('Error de Supabase al guardar: ' + error.message);
+      } else {
+        alert('¡Préstamo registrado exitosamente!');
+        setAcreedor('');
+        setMontoOriginal('');
+        setBalancePendiente('');
+        setMontoAtraso('0');
+        await cargarPrestamos();
+      }
     } catch (err: any) {
-      alert('Error al guardar préstamo: ' + err.message);
+      alert('Error inesperado: ' + err.message);
     } finally {
       setCargando(false);
     }
@@ -119,16 +131,16 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
       const nuevasCuotas = Number(target.cuotas_pagadas) + 1;
       const nuevoAtraso = Math.max(0, Number(target.monto_atraso || 0) - valorAbono);
 
-      // 1. Actualizar Préstamo
-      await supabase.from('prestamos').update({
+      const { error: err1 } = await supabase.from('prestamos').update({
         balance_pendiente: nuevoBalance,
         cuotas_pagadas: nuevasCuotas,
         monto_atraso: nuevoAtraso,
         estado: nuevoBalance === 0 ? 'Liquidado' : 'Activo'
       }).eq('id', target.id);
 
-      // 2. Registrar en Presupuesto como Gasto de la Wallet elegida
-      await supabase.from('presupuesto').insert([{
+      if (err1) throw err1;
+
+      const { error: err2 } = await supabase.from('presupuesto').insert([{
         familia_id: familiaId,
         fecha: new Date().toISOString().split('T')[0],
         tipo: 'Gasto',
@@ -141,7 +153,9 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
         wallet: walletPago || 'Efectivo'
       }]);
 
-      alert(`¡Pago de RD$ ${valorAbono.toLocaleString()} registrado con éxito desde ${walletPago}!`);
+      if (err2) throw err2;
+
+      alert(`¡Pago de RD$ ${valorAbono.toLocaleString()} registrado con éxito!`);
       setMontoPago('');
       await cargarPrestamos();
     } catch (err: any) {
@@ -153,8 +167,12 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
 
   const eliminarPrestamo = async (id: string) => {
     if (!confirm('¿Deseas eliminar este préstamo?')) return;
-    await supabase.from('prestamos').delete().eq('id', id);
-    cargarPrestamos();
+    const { error } = await supabase.from('prestamos').delete().eq('id', id);
+    if (error) {
+      alert('Error al eliminar: ' + error.message);
+    } else {
+      cargarPrestamos();
+    }
   };
 
   const totalAtrasos = prestamos
@@ -164,10 +182,9 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
       
-      {/* Columna Izquierda */}
+      {/* Formulario */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         
-        {/* Selector de Modo: Registrar Préstamo VS Pagar Cuota */}
         <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
             <button
@@ -209,7 +226,6 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
           </div>
 
           {modoFormulario === 'registrar' ? (
-            /* FORMULARIO 1: REGISTRAR PRÉSTAMO */
             <form onSubmit={handleSubmit}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <div>
@@ -221,7 +237,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Banco / Entidad / Persona</label>
-                  <input type="text" required value={acreedor} onChange={e => setAcreedor(e.target.value)} placeholder="Ej. Banreservas, Cooperativa..." style={inputStyle} />
+                  <input type="text" required value={acreedor} onChange={e => setAcreedor(e.target.value)} placeholder="Ej. Cooperativa Mamoncito..." style={inputStyle} />
                 </div>
               </div>
 
@@ -265,7 +281,6 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
               </button>
             </form>
           ) : (
-            /* FORMULARIO 2: PAGAR CUOTA */
             <form onSubmit={handleProcesarPago}>
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Seleccionar Deuda / Préstamo a Pagar</label>
@@ -304,7 +319,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
         <WalletsManager familiaId={familiaId} onWalletCambio={cargarWallets} />
       </div>
 
-      {/* Columna Derecha: Lista de Préstamos */}
+      {/* Historial */}
       <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
           <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
