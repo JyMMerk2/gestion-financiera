@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { TransaccionPresupuesto, RegistroPatrimonio } from '../types';
+import { TransaccionPresupuesto } from '../types';
 import { TrendingUp, TrendingDown, Coins, Eye, EyeOff, LogOut, ChevronLeft, ChevronRight, CreditCard, Building2, Landmark, Wallet } from 'lucide-react';
 
 interface DashboardProps {
@@ -28,7 +28,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
 
   const [ultimasTransacciones, setUltimasTransacciones] = useState<TransaccionPresupuesto[]>([]);
   const [walletsBalances, setWalletsBalances] = useState<Record<string, number>>({});
-  const [historial12Meses, setHistorial12Meses] = useState<{ mes: string; label: string; ahorro: number; esSuperavit: boolean }[]>([]);
+  
+  // Estructura de 12 meses registrando Ingresos y Gastos de forma independiente
+  const [historial12Meses, setHistorial12Meses] = useState<{ mes: string; label: string; ingresos: number; gastos: number }[]>([]);
 
   // Estilos
   const cardBg = modoOscuro ? '#1e293b' : '#ffffff';
@@ -56,7 +58,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
     if (!familiaId) return;
 
     const cargarMetricas = async () => {
-      // Wallets
+      // 1. Wallets
       const { data: wallData } = await supabase
         .from('wallets')
         .select('*')
@@ -69,7 +71,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
         });
       }
 
-      // Presupuesto
+      // Estructurar los últimos 12 meses
+      const mesesLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const fechaActual = new Date();
+      let temp12Meses: { mes: string; label: string; ingresos: number; gastos: number }[] = [];
+
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        temp12Meses.push({
+          mes: key,
+          label: mesesLabels[d.getMonth()],
+          ingresos: 0,
+          gastos: 0
+        });
+      }
+
+      // 2. Presupuesto
       const { data: presData } = await supabase
         .from('presupuesto')
         .select('*')
@@ -78,40 +96,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
       let ing = 0, gas = 0;
       let ultimas: TransaccionPresupuesto[] = [];
 
-      // Cálculo de los últimos 12 meses
-      const mesesLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      const fechaActual = new Date();
-      let temp12Meses: { mes: string; label: string; ahorro: number; esSuperavit: boolean }[] = [];
-
-      for (let i = 11; i >= 0; i--) {
-        const d = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - i, 1);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        temp12Meses.push({
-          mes: key,
-          label: mesesLabels[d.getMonth()],
-          ahorro: 0,
-          esSuperavit: true
-        });
-      }
-
       if (presData) {
         presData.forEach((row: TransaccionPresupuesto) => {
+          const montoNum = Number(row.monto_dop || 0);
           const factor = row.tipo === 'Ingreso' ? 1 : -1;
           const wNombre = row.wallet || 'Efectivo';
-          mapWallets[wNombre] = (mapWallets[wNombre] || 0) + (Number(row.monto_dop) * factor);
+          mapWallets[wNombre] = (mapWallets[wNombre] || 0) + (montoNum * factor);
 
-          // Sumar para los 12 meses
+          // Acumular separadamente Ingresos y Gastos por mes
           const mesRow = row.fecha.substring(0, 7);
           const mesObj = temp12Meses.find(m => m.mes === mesRow);
           if (mesObj) {
-            mesObj.ahorro += Number(row.monto_dop) * factor;
-            mesObj.esSuperavit = mesObj.ahorro >= 0;
+            if (row.tipo === 'Ingreso') mesObj.ingresos += montoNum;
+            else mesObj.gastos += montoNum;
           }
 
           if (row.fecha.startsWith(mesSeleccionado)) {
-            if (row.tipo === 'Ingreso') ing += Number(row.monto_dop);
-            else gas += Number(row.monto_dop);
+            if (row.tipo === 'Ingreso') ing += montoNum;
+            else gas += montoNum;
             ultimas.push(row);
+          }
+        });
+      }
+
+      // 3. Patrimonio (Aportes de inversión/patrimonio sumados a ingresos del mes)
+      const { data: patData } = await supabase
+        .from('patrimonio')
+        .select('*')
+        .eq('familia_id', familiaId);
+
+      let bienes = 0;
+      if (patData) {
+        patData.forEach((b: any) => {
+          const valorPat = Number(b.valor_dop ?? b.valor ?? b.monto ?? 0);
+          bienes += valorPat;
+
+          const fechaPat = b.fecha || b.fecha_registro;
+          if (fechaPat) {
+            const mesPat = fechaPat.substring(0, 7);
+            const mesObj = temp12Meses.find(m => m.mes === mesPat);
+            if (mesObj) {
+              mesObj.ingresos += valorPat;
+            }
           }
         });
       }
@@ -123,7 +149,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
       setWalletsBalances(mapWallets);
       setUltimasTransacciones(ultimas.slice(-5).reverse());
 
-      // Préstamos
+      // 4. Préstamos
       const { data: prestData } = await supabase
         .from('prestamos')
         .select('*')
@@ -141,17 +167,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
       }
       setDeudasTotales(deudas);
 
-      // Patrimonio
-      const { data: patData } = await supabase
-        .from('patrimonio')
-        .select('*')
-        .eq('familia_id', familiaId);
-
-      let bienes = 0;
-      if (patData) {
-        patData.forEach((b: RegistroPatrimonio) => bienes += Number(b.valor_dop || 0));
-      }
-
       const totalWallets = Object.values(mapWallets).reduce((a, b) => a + b, 0);
       setDisponibleReal(totalWallets);
       setPatrimonioNeto(totalWallets + bienes - deudas);
@@ -162,10 +177,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
 
   const blurStyle = modoPrivacidad ? { filter: 'blur(6px)', opacity: 0.35, userSelect: 'none' as const } : {};
 
-  // Cálculo del valor absoluto máximo de los 12 meses para escalar las barras correctamente
-  const maxValorAbsoluto = Math.max(
-    ...historial12Meses.map(m => Math.abs(m.ahorro)),
-    100
+  // Cálculo del monto máximo global para la escala de alturas
+  const maxMontoGlobal = Math.max(
+    ...historial12Meses.map(m => Math.max(m.ingresos, m.gastos)),
+    1000
   );
 
   return (
@@ -269,31 +284,45 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
         </div>
       </div>
 
-      {/* Bloque 2: Gráfica de Ahorro Mensual con Altura Dinámica Corregida */}
+      {/* Bloque 2: Gráfica de Doble Barra (Ingresos vs. Gastos) por Mes */}
       <div style={{ background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: textPrimary }}>
-          Ahorro mensual — últimos 12 meses
+          Flujo de dinero (Ingresos vs. Gastos) — últimos 12 meses
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '6px', alignItems: 'flex-end', height: '120px', borderBottom: `1px solid ${cardBorder}`, paddingBottom: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px', alignItems: 'flex-end', height: '110px', borderBottom: `1px solid ${cardBorder}`, paddingBottom: '8px' }}>
           {historial12Meses.map((m, idx) => {
-            // Se asigna la altura dinámica según el balance del mes
-            const alturaPorcentaje = m.ahorro !== 0 
-              ? Math.max(12, Math.round((Math.abs(m.ahorro) / maxValorAbsoluto) * 100))
-              : 6;
+            const hIngreso = m.ingresos > 0 ? Math.max(8, Math.min(65, Math.round((m.ingresos / maxMontoGlobal) * 65))) : 4;
+            const hGasto = m.gastos > 0 ? Math.max(8, Math.min(65, Math.round((m.gastos / maxMontoGlobal) * 65))) : 4;
 
             return (
               <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                <div 
-                  style={{
-                    width: '100%',
-                    height: `${alturaPorcentaje}%`,
-                    borderRadius: '4px 4px 0 0',
-                    background: m.ahorro === 0 ? cardBorder : (m.esSuperavit ? '#10b981' : '#ef4444'),
-                    transition: 'all 0.4s ease-in-out'
-                  }}
-                  title={`${m.label}: RD$ ${m.ahorro.toLocaleString()}`}
-                />
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', width: '100%', justifyContent: 'center' }}>
+                  {/* Barra Verde - Ingresos / Entradas */}
+                  <div 
+                    style={{
+                      flex: 1,
+                      maxWidth: '10px',
+                      height: `${hIngreso}px`,
+                      borderRadius: '3px 3px 0 0',
+                      background: m.ingresos > 0 ? '#10b981' : (modoOscuro ? '#334155' : '#e2e8f0'),
+                      transition: 'all 0.3s ease'
+                    }}
+                    title={`${m.label} Ingresos: RD$ ${m.ingresos.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                  />
+                  {/* Barra Roja - Gastos / Salidas */}
+                  <div 
+                    style={{
+                      flex: 1,
+                      maxWidth: '10px',
+                      height: `${hGasto}px`,
+                      borderRadius: '3px 3px 0 0',
+                      background: m.gastos > 0 ? '#ef4444' : (modoOscuro ? '#334155' : '#e2e8f0'),
+                      transition: 'all 0.3s ease'
+                    }}
+                    title={`${m.label} Gastos: RD$ ${m.gastos.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                  />
+                </div>
                 <span style={{ fontSize: '9px', fontWeight: m.mes === mesSeleccionado ? 'bold' : 'normal', color: m.mes === mesSeleccionado ? textPrimary : textSecondary, marginTop: '8px' }}>
                   {m.label}
                 </span>
@@ -304,15 +333,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
 
         <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '10px', fontWeight: 'bold' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
-            <span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '2px' }}></span> Ahorro
+            <span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '2px' }}></span> Ingresos / Entradas
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444' }}>
-            <span style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '2px' }}></span> Déficit
+            <span style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '2px' }}></span> Gastos / Salidas
           </span>
         </div>
       </div>
 
-      {/* Bloque 3: Últimas Transacciones del Mes con Formato Corregido */}
+      {/* Bloque 3: Últimas Transacciones del Mes */}
       <div style={{ background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '12px', color: textPrimary }}>Últimas transacciones del mes</div>
         {ultimasTransacciones.length === 0 ? (
