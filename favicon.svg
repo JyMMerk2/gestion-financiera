@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" stroke="#000000" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Pila de monedas izquierda -->
+  <ellipse cx="280" cy="180" rx="60" ry="25"/>
+  <path d="M220 180 v180 c0 14 27 25 60 25 s60 -11 60 -25 v-180"/>
+  <path d="M220 270 c0 14 27 25 60 25 s60 -11 60 -25"/>
+
+  <!-- Pila de monedas frontal -->
+  <ellipse cx="190" cy="380" rx="60" ry="25"/>
+  <path d="M130 380 v90 c0 14 27 25 60 25 s60 -11 60 -25 v-90"/>
+
+  <ellipse cx="120" cy="850" rx="50" ry="20" transform="scale(1, 0.5) translate(-10, 800)"/>
+
+  <!-- Bolsa de Dinero -->
+  <path d="M280 180 C230 130 200 90 230 40 C280 10 350 10 400 40 C430 90 400 130 350 180 Z"/>
+  <path d="M230 180 C180 230 180 380 230 430 C280 470 420 470 470 430 C500 380 500 230 430 180 Z"/>
+
+  <!-- Símbolo Euro -->
+  <path d="M360 220 C310 210 290 280 340 330" stroke-width="24"/>
+  <line x1="280" y1="255" x2="330" y2="255" stroke-width="24"/>
+  <line x1="285" y1="285" x2="330" y2="285" stroke-width="24"/>
+</svg>
