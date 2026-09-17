@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase';
+import { consultarTablaCompartida, insertarRegistroCompartido, obtenerFamiliaIdActiva } from '../services/familiaService';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { WalletsManager } from './WalletsManager';
 import { Trash2, Edit2, PieChart, Landmark, X, Search } from 'lucide-react';
 
 interface PatrimonioProps {
-  familiaId: string;
+  familiaId?: string;
+  perfil?: any;
 }
 
-export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
+export const Patrimonio: React.FC<PatrimonioProps> = ({ perfil }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
 
   // Campos Formulario
@@ -27,13 +29,19 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
   const [activos, setActivos] = useState<any[]>([]);
   const [walletsDinamicas, setWalletsDinamicas] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [familiaActivaId, setFamiliaActivaId] = useState<string | null>(null);
 
-  const cargarWallets = async () => {
-    if (!familiaId) return;
+  // Carga de Wallets por Familia
+  const cargarWallets = useCallback(async () => {
+    const famId = perfil?.familia_id || perfil?.familias?.id || (await obtenerFamiliaIdActiva());
+    if (!famId) return;
+
+    setFamiliaActivaId(famId);
+
     const { data } = await supabase
       .from('wallets')
       .select('id, nombre, moneda')
-      .eq('familia_id', familiaId)
+      .eq('familia_id', famId)
       .order('created_at', { ascending: true });
 
     if (data && data.length > 0) {
@@ -42,31 +50,24 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
     } else {
       setWalletsDinamicas([]);
     }
-  };
+  }, [perfil, wallet]);
 
-  const cargarPatrimonio = async () => {
-    if (!familiaId) return;
-    const { data, error } = await supabase
-      .from('patrimonio')
-      .select('*')
-      .eq('familia_id', familiaId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error al cargar patrimonio:', error);
-    } else if (data) {
+  // Carga compartida desde familiaService.ts
+  const cargarPatrimonio = useCallback(async () => {
+    const { data } = await consultarTablaCompartida('patrimonio', 'created_at');
+    if (data) {
       setActivos(data);
     }
-  };
+  }, []);
 
   useEffect(() => {
     cargarPatrimonio();
     cargarWallets();
-  }, [familiaId]);
+  }, [cargarPatrimonio, cargarWallets]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombreBien.trim() || !valor || !familiaId) {
+    if (!nombreBien.trim() || !valor) {
       alert('Ingresa el nombre del bien y un valor válido.');
       return;
     }
@@ -77,7 +78,6 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
       const fechaVal = fecha || new Date().toISOString().split('T')[0];
 
       const payload = {
-        familia_id: familiaId,
         nombre: nombreBien.trim(),
         nombre_bien: nombreBien.trim(),
         tipo_bien: tipoBien,
@@ -92,8 +92,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
         alert('¡Registro de patrimonio actualizado!');
         setIdEditando(null);
       } else {
-        const { error } = await supabase.from('patrimonio').insert([payload]);
-        if (error) throw error;
+        await insertarRegistroCompartido('patrimonio', payload);
         alert('¡Bien/Patrimonio registrado exitosamente!');
       }
 
@@ -232,7 +231,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
           </form>
         </div>
 
-        <WalletsManager familiaId={familiaId} onWalletCambio={cargarWallets} />
+        <WalletsManager familiaId={familiaActivaId || ''} onWalletCambio={cargarWallets} />
       </div>
 
       {/* Gráfica por Categoría + Historial */}
@@ -241,7 +240,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
         {/* Panel de Gráfica por Categoría */}
         <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
           <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <PieChart size={14} color="#00e5ff" /> Distribución por Categoria
+            <PieChart size={14} color="#00e5ff" /> Distribución por Categoría
           </div>
 
           {totalPatrimonio === 0 ? (
