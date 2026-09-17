@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { ExternalLink, CheckSquare, Square, Trash2, Search, Edit2, X, Target } from 'lucide-react';
@@ -22,6 +22,9 @@ interface ItemMeta {
 export const Metas: React.FC<MetasProps> = ({ familiaId, perfil }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
 
+  // Resolución segura del ID de la Familia activa
+  const idFamiliaActiva = familiaId || perfil?.familia_id || perfil?.familias?.id;
+
   const [titulo, setTitulo] = useState('');
   const [nuevaCategoria, setNuevaCategoria] = useState('');
   const [categoria, setCategoria] = useState<string>('General');
@@ -41,25 +44,21 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, perfil }) => {
   const tasaUsd = perfil?.familias?.tasa_usd || 60.00;
   const tasaEur = perfil?.familias?.tasa_eur || 65.00;
 
-  const cargarMetas = async () => {
-    if (!familiaId) return;
+  const cargarMetas = useCallback(async () => {
+    if (!idFamiliaActiva) return;
 
     const { data } = await supabase
       .from('metas')
       .select('*')
-      .eq('familia_id', familiaId)
+      .eq('familia_id', idFamiliaActiva)
       .order('created_at', { ascending: true });
 
     if (data) setMetas(data);
-  };
+  }, [idFamiliaActiva]);
 
   useEffect(() => {
-    cargarMetra();
-  }, [familiaId]);
-
-  const cargarMetra = async () => {
-    await cargarMetas();
-  };
+    cargarMetas();
+  }, [cargarMetas]);
 
   // Extraer categorías únicas creadas por el usuario
   const categoriasDisponibles = Array.from(new Set(metas.map(m => m.categoria)));
@@ -73,14 +72,14 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, perfil }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titulo.trim() || !familiaId) return;
+    if (!titulo.trim() || !idFamiliaActiva) return;
 
     const categoriaFinal = nuevaCategoria.trim() ? nuevaCategoria.trim() : categoria;
 
     setCargando(true);
     try {
       const payload = {
-        familia_id: familiaId,
+        familia_id: idFamiliaActiva,
         categoria: categoriaFinal,
         titulo: titulo.trim(),
         completado: false,
