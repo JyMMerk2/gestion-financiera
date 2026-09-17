@@ -45,7 +45,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         setNombreFamilia(perfil.familias.nombre || '');
         setCodigoInvitacion(perfil.familias.codigo_invitacion || '');
         if (perfil.familias.tasa_usd) setTasaUsd(String(perfil.familias.tasa_usd));
-        if (perfil.familias.tasa_eur) setTasaEur(String(perfil.familias.tasa_eur));
       }
     }
   }, [perfil]);
@@ -171,13 +170,13 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardando(true);
     try {
+      // Se envían únicamente los campos existentes en el esquema de 'familias'
       const { error } = await supabase
         .from('familias')
         .update({
           nombre: nombreFamilia.trim(),
           codigo_invitacion: codigoInvitacion.trim().toUpperCase(),
-          tasa_usd: Number(tasaUsd) || 60.00,
-          tasa_eur: Number(tasaEur) || 65.00
+          tasa_usd: Number(tasaUsd) || 60.00
         })
         .eq('id', familiaId);
 
