@@ -29,7 +29,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     setToasts(prev => [...prev, { id, tipo, mensaje }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4500);
+    }, 4000);
   };
 
   const cerrarToast = (id: number) => {
@@ -122,7 +122,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
       if (error) throw error;
       mostrarNotificacion('exito', '¡Nombre de usuario actualizado con éxito!');
-      onPerfilActualizado();
+      await onPerfilActualizado();
     } catch (err: any) {
       mostrarNotificacion('error', 'Error al actualizar nombre: ' + err.message);
     } finally {
@@ -178,7 +178,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Creación y Vinculación limpia de Familia
+  // Creación y Vinculación Fluida sin Pestañeos de Recarga
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!perfil?.id) return;
@@ -190,7 +190,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       let familiaId = perfil?.familia_id || perfil?.familias?.id;
 
       if (!familiaId) {
-        // 1. Insertar EXCLUSIVAMENTE campos nativos de la tabla familias
         const { error: errInsert } = await supabase
           .from('familias')
           .insert([{
@@ -202,7 +201,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           throw errInsert;
         }
 
-        // 2. Obtener el ID recién creado buscando por su código
         const { data: famTarget, error: errSelect } = await supabase
           .from('familias')
           .select('id')
@@ -216,7 +214,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
         familiaId = famTarget.id;
 
-        // 3. Vincular el id de la familia en la tabla perfiles
         const { error: errPerfil } = await supabase
           .from('perfiles')
           .update({ familia_id: familiaId })
@@ -225,7 +222,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         if (errPerfil) throw errPerfil;
 
       } else {
-        // Actualización directa si ya estaba vinculado
         const { error: errUpdate } = await supabase
           .from('familias')
           .update({
@@ -240,8 +236,9 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       mostrarNotificacion('exito', '¡Grupo familiar guardado y vinculado exitosamente!');
       setFamiliaActualNombre(nomFinal);
       setFamiliaActualCodigo(codFinal);
+      
+      // Actualización reactiva instantánea sin recargar la página entera
       await onPerfilActualizado();
-      setTimeout(() => window.location.reload(), 1200);
     } catch (err: any) {
       mostrarNotificacion('error', 'Detalle al guardar grupo: ' + err.message);
     } finally {
@@ -297,7 +294,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       mostrarNotificacion('exito', `¡Te has unido exitosamente al grupo "${famTarget.nombre}"!`);
       setCodigoUnirse('');
       await onPerfilActualizado();
-      setTimeout(() => window.location.reload(), 1200);
     } catch (err: any) {
       mostrarNotificacion('error', 'Error al unirse: ' + err.message);
     }
@@ -336,13 +332,12 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   return (
     <div style={{ background: bgCard, padding: '24px', borderRadius: '16px', border: `1px solid ${borderCard}`, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
       
-      {/* CORTEN DE NOTIFICACIONES TOAST CYBERPUNK */}
+      {/* COMPONENTE DE NOTIFICACIONES ELEGANTES */}
       <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '360px' }}>
         {toasts.map(t => {
           const esExito = t.tipo === 'exito';
           const esError = t.tipo === 'error';
           const colorBorde = esExito ? '#00ff41' : esError ? '#ff007f' : '#00e5ff';
-          const colorBg = esExito ? 'rgba(0,255,65,0.12)' : esError ? 'rgba(255,0,127,0.12)' : 'rgba(0,229,255,0.12)';
 
           return (
             <div
@@ -358,8 +353,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
                 alignItems: 'center',
                 gap: '10px',
                 color: '#fff',
-                backdropFilter: 'blur(10px)',
-                animation: 'slideIn 0.3s ease-out'
+                backdropFilter: 'blur(10px)'
               }}
             >
               {esExito && <CheckCircle2 size={18} color="#00ff41" />}
