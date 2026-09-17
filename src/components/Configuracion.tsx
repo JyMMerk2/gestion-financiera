@@ -169,7 +169,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Guardado de la Familia con detección de RLS y Vinculación directa
+  // Guardado Garantizado con Búsqueda por Código Único
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuardandoFamilia(true);
@@ -180,7 +180,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       const codFinal = codigoInvitacion.trim().toUpperCase() || 'FAMILIA-2026';
 
       if (!familiaId) {
-        // 1. Intentar buscar si ya existe una familia con ese código de invitación
+        // 1. Verificar si ya existe esa familia registrada
         const { data: famExistente } = await supabase
           .from('familias')
           .select('id')
@@ -189,37 +189,38 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
         if (famExistente) {
           familiaId = famExistente.id;
-          // Actualizamos nombre si ya existe
-          await supabase
-            .from('familias')
-            .update({ nombre: nomFinal })
-            .eq('id', familiaId);
         } else {
-          // 2. Crear un nuevo registro en 'familias'
-          const { data: nuevaFam, error: errCrear } = await supabase
+          // 2. Insertar sin forzar retorno inmediato
+          const { error: errInsert } = await supabase
             .from('familias')
             .insert([{
               nombre: nomFinal,
               codigo_invitacion: codFinal,
               tasa_usd: Number(tasaUsd) || 60.00
-            }])
-            .select()
+            }]);
+
+          if (errInsert) throw errInsert;
+
+          // 3. Consultar el ID recién creado
+          const { data: nuevaFam, error: errFetch } = await supabase
+            .from('familias')
+            .select('id')
+            .eq('codigo_invitacion', codFinal)
             .single();
 
-          if (errCrear) throw errCrear;
+          if (errFetch || !nuevaFam) throw new Error('No se pudo recuperar el ID de la familia creada.');
           familiaId = nuevaFam.id;
         }
 
-        // 3. Vincular obligatoriamente en la tabla perfiles
+        // 4. Actualizar el perfil con el id de la familia creada
         const { error: errPerfil } = await supabase
           .from('perfiles')
           .update({ familia_id: familiaId })
           .eq('id', perfil.id);
 
         if (errPerfil) throw errPerfil;
-
       } else {
-        // 4. Si ya estaba vinculado, simplemente se actualiza el registro en la tabla 'familias'
+        // 5. Actualización directa si ya tiene una familia vinculada
         const { error: errUpdate } = await supabase
           .from('familias')
           .update({
