@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
-import { Copy, Share2, Check, RefreshCw, KeyRound, User } from 'lucide-react';
+import { Copy, Share2, Check, RefreshCw, KeyRound, User, Users, Key } from 'lucide-react';
 
 interface ConfiguracionProps {
   perfil: any;
@@ -11,7 +11,10 @@ interface ConfiguracionProps {
 }
 
 export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilActualizado, moneda = 'RD$', setMoneda }) => {
-  const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle } = useModoOscuro();
+  const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
+
+  // Versión de la Aplicación
+  const APP_VERSION = 'v2.5.0';
 
   // Estados de Usuario / Perfil
   const [nombreUsuario, setNombreUsuario] = useState('');
@@ -25,11 +28,13 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   // Estados de Familia y Tasas
   const [nombreFamilia, setNombreFamilia] = useState('');
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
+  const [codigoUnirse, setCodigoUnirse] = useState('');
   const [tasaUsd, setTasaUsd] = useState('60.00');
   const [tasaEur, setTasaEur] = useState('65.00');
   const [estadoTasa, setEstadoTasa] = useState('Cargando...');
   const [guardando, setGuardando] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  const [copiadoApp, setCopiadoApp] = useState(false);
 
   // Carga los datos reales de Supabase en el estado local
   useEffect(() => {
@@ -136,7 +141,8 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!perfil?.familia_id) {
+    const familiaId = perfil?.familia_id || perfil?.familias?.id;
+    if (!familiaId) {
       alert('No tienes un ID de familia asignado.');
       return;
     }
@@ -151,7 +157,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           tasa_usd: Number(tasaUsd) || 60.00,
           tasa_eur: Number(tasaEur) || 65.00
         })
-        .eq('id', perfil.familia_id);
+        .eq('id', familiaId);
 
       if (error) {
         alert('Error al actualizar la familia: ' + error.message);
@@ -161,6 +167,45 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       }
     } catch (err: any) {
       alert('Error inesperado: ' + err.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const handleUnirseFamilia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!codigoUnirse.trim()) {
+      alert('Ingresa un código de invitación válido.');
+      return;
+    }
+
+    setGuardando(true);
+    try {
+      const { data: famTarget, error: errFam } = await supabase
+        .from('familias')
+        .select('id, nombre')
+        .eq('codigo_invitacion', codigoUnirse.trim().toUpperCase())
+        .single();
+
+      if (errFam || !famTarget) {
+        alert('Código de familia no encontrado. Verifique e intente nuevamente.');
+        setGuardando(false);
+        return;
+      }
+
+      const { error: errPerfil } = await supabase
+        .from('perfiles')
+        .update({ familia_id: famTarget.id })
+        .eq('id', perfil.id);
+
+      if (errPerfil) throw errPerfil;
+
+      alert(`¡Te has unido exitosamente al grupo familiar "${famTarget.nombre}"!`);
+      setCodigoUnirse('');
+      await onPerfilActualizado();
+      window.location.reload();
+    } catch (err: any) {
+      alert('Error al unirse: ' + err.message);
     } finally {
       setGuardando(false);
     }
@@ -191,9 +236,15 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
+  const compartirApp = () => {
+    navigator.clipboard.writeText(window.location.origin);
+    setCopiadoApp(true);
+    setTimeout(() => setCopiadoApp(false), 2000);
+  };
+
   return (
-    <div style={{ background: bgCard, padding: '24px', borderRadius: '16px', border: `1px solid ${borderCard}`, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: textTitle }}>
+    <div style={{ background: bgCard, padding: '24px', borderRadius: '16px', border: `1px solid ${borderCard}`, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: textTitle, letterSpacing: '0.05em' }}>
         ⚙️ Configuración del Perfil y Grupo Familiar
       </h2>
 
@@ -208,8 +259,8 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
             onChange={(e) => setMoneda(e.target.value as 'RD$' | 'USD')}
             style={{ ...inputStyle, fontWeight: 'bold' }}
           >
-            <option value="RD$">Dólares / Pesos (RD$)</option>
-            <option value="USD">Dólares Estadounidenses ($ USD)</option>
+            <option value="RD$" style={{ background: bgCard, color: textPrimary }}>Dólares / Pesos (RD$)</option>
+            <option value="USD" style={{ background: bgCard, color: textPrimary }}>Dólares Estadounidenses ($ USD)</option>
           </select>
         </div>
       )}
@@ -217,7 +268,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       {/* Bloque 1: Datos de Perfil y Nombre */}
       <form onSubmit={handleGuardarUsuario} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <User size={14} /> Mi Usuario
+          <User size={14} color="#00e5ff" /> Mi Usuario
         </div>
 
         <div style={{ marginBottom: '10px' }}>
@@ -248,7 +299,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         <button
           type="submit"
           disabled={guardandoUsuario}
-          style={{ width: '100%', background: '#0284c7', color: '#fff', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
+          style={{ width: '100%', background: esOscuro ? '#00e5ff' : '#0284c7', color: esOscuro ? '#0a0e14' : '#fff', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
         >
           {guardandoUsuario ? 'Guardando...' : 'Actualizar Nombre'}
         </button>
@@ -257,7 +308,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       {/* Bloque 2: Cambiar Contraseña */}
       <form onSubmit={handleCambiarPassword} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <KeyRound size={14} /> Seguridades y Contraseña
+          <KeyRound size={14} color="#00ff41" /> Seguridades y Contraseña
         </div>
 
         <div style={{ marginBottom: '10px' }}>
@@ -291,14 +342,18 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         <button
           type="submit"
           disabled={guardandoPassword}
-          style={{ width: '100%', background: '#10b981', color: '#fff', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
+          style={{ width: '100%', background: '#00ff41', color: '#0a0e14', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
         >
           {guardandoPassword ? 'Cambiando...' : 'Guardar Nueva Contraseña'}
         </button>
       </form>
 
       {/* Bloque 3: Formulario de Grupo Familiar y Tasas */}
-      <form onSubmit={handleGuardarFamilia}>
+      <form onSubmit={handleGuardarFamilia} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
+        <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Users size={14} color="#ffea00" /> Grupo Familiar y Compartir
+        </div>
+
         <div style={{ marginBottom: '14px' }}>
           <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
             Nombre del Grupo Familiar
@@ -332,18 +387,27 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
               type="button"
               onClick={copiarCodigo}
               title="Copiar Código"
-              style={{ background: borderCard, border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: textPrimary }}
+              style={{ background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '8px', padding: '0 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: textPrimary }}
             >
-              {copiado ? <Check size={16} color="#10b981" /> : <Copy size={16} />}
+              {copiado ? <Check size={16} color="#00ff41" /> : <Copy size={16} />}
             </button>
 
             <button
               type="button"
               onClick={compartirCodigo}
               title="Compartir Código"
-              style={{ background: '#0284c7', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }}
+              style={{ background: esOscuro ? '#00e5ff' : '#0284c7', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: esOscuro ? '#0a0e14' : '#fff' }}
             >
               <Share2 size={16} />
+            </button>
+
+            <button
+              type="button"
+              onClick={compartirApp}
+              title="Compartir enlace de la App"
+              style={{ background: 'rgba(255, 0, 127, 0.15)', border: '1px solid #ff007f', color: '#ff007f', borderRadius: '8px', padding: '0 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}
+            >
+              {copiadoApp ? <Check size={14} color="#00ff41" /> : 'App'}
             </button>
           </div>
 
@@ -353,7 +417,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </div>
 
         {/* Panel de Tasas de Cambio Automáticas / Editables */}
-        <div style={{ background: borderCard, padding: '12px', borderRadius: '10px', marginBottom: '16px' }}>
+        <div style={{ background: bgInput, border: `1px solid ${borderCard}`, padding: '12px', borderRadius: '10px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ fontSize: '11px', fontWeight: '800', color: textTitle }}>
               💱 Tasas de Cambio Oficiales (Relación a RD$)
@@ -361,7 +425,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
             <button
               type="button"
               onClick={consultarTasasEnVivo}
-              style={{ background: 'transparent', border: 'none', color: '#0284c7', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 'bold' }}
+              style={{ background: 'transparent', border: 'none', color: '#00e5ff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 'bold' }}
             >
               <RefreshCw size={12} /> Actualizar
             </button>
@@ -388,8 +452,8 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           disabled={guardando}
           style={{
             width: '100%',
-            background: '#0284c7',
-            color: '#fff',
+            background: esOscuro ? '#00e5ff' : '#0284c7',
+            color: esOscuro ? '#0a0e14' : '#fff',
             padding: '11px',
             border: 'none',
             borderRadius: '8px',
@@ -402,6 +466,37 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           {guardando ? 'Guardando Cambios...' : 'Guardar Datos y Tasas'}
         </button>
       </form>
+
+      {/* Bloque 4: Unirse a Otra Familia Existente */}
+      <div style={{ borderBottom: `1px solid ${borderCard}`, paddingBottom: '16px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '800', color: '#ffea00', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <Key size={14} /> ¿Quieres unirte a otro grupo familiar existente?
+        </div>
+        <form onSubmit={handleUnirseFamilia} style={{ display: 'flex', gap: '8px' }}>
+          <input
+            type="text"
+            placeholder="Ingresa el código de invitación..."
+            value={codigoUnirse}
+            onChange={e => setCodigoUnirse(e.target.value)}
+            style={{ ...inputStyle, flex: 1 }}
+          />
+          <button
+            type="submit"
+            disabled={guardando}
+            style={{ background: '#ffea00', color: '#0a0e14', padding: '0 14px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '10px', textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            Vincular Familia
+          </button>
+        </form>
+      </div>
+
+      {/* Pie de Página con Versión del Sistema */}
+      <div style={{ textAlign: 'center', paddingTop: '4px' }}>
+        <span style={{ fontSize: '10px', fontWeight: '800', color: textLabel, letterSpacing: '0.05em' }}>
+          Gestión Financiera App • <span style={{ color: '#00e5ff' }}>{APP_VERSION}</span>
+        </span>
+      </div>
+
     </div>
   );
 };
