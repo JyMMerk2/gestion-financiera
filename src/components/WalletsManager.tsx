@@ -10,8 +10,6 @@ interface WalletItem {
   nombre: string;
   tipo?: string;
   balance?: number;
-  balance_inicial?: number;
-  balance_actual?: number;
   moneda: string;
 }
 
@@ -61,7 +59,7 @@ export const WalletsManager: React.FC<WalletsManagerProps> = ({ familiaId, onWal
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('Usuario no autenticado.');
 
-      // Obtener familia_id de perfiles
+      // Obtener familia_id del usuario
       const { data: perfilData } = await supabase
         .from('perfiles')
         .select('familia_id')
@@ -71,14 +69,13 @@ export const WalletsManager: React.FC<WalletsManagerProps> = ({ familiaId, onWal
       const montoNum = balance ? Number(balance) : 0;
       const famIdFinal = perfilData?.familia_id || (familiaId && familiaId !== user.id ? familiaId : null);
 
+      // Payload estricto alineado al esquema real de Supabase
       const payload = {
         user_id: user.id,
         familia_id: famIdFinal,
         nombre: nombre.trim(),
         tipo: 'Banco',
         balance: montoNum,
-        balance_inicial: montoNum,
-        balance_actual: montoNum,
         moneda
       };
 
@@ -135,7 +132,7 @@ export const WalletsManager: React.FC<WalletsManagerProps> = ({ familiaId, onWal
           <span style={{ fontSize: '11px', color: textLabel }}>No hay cuentas personalizadas creadas aún.</span>
         ) : (
           wallets.map(w => {
-            const montoMostrar = Number(w.balance ?? w.balance_inicial ?? w.balance_actual ?? 0);
+            const montoMostrar = Number(w.balance || 0);
             return (
               <div key={w.id} style={{ background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '10px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
