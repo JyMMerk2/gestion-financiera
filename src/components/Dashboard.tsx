@@ -162,6 +162,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
 
   const blurStyle = modoPrivacidad ? { filter: 'blur(6px)', opacity: 0.35, userSelect: 'none' as const } : {};
 
+  // Cálculo del valor absoluto máximo de los 12 meses para escalar las barras correctamente
+  const maxValorAbsoluto = Math.max(
+    ...historial12Meses.map(m => Math.abs(m.ahorro)),
+    100
+  );
+
   return (
     <div style={{ paddingBottom: '30px' }}>
       
@@ -263,30 +269,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
         </div>
       </div>
 
-      {/* Bloque 2: Gráfica de Ahorro Mensual */}
+      {/* Bloque 2: Gráfica de Ahorro Mensual con Altura Dinámica Corregida */}
       <div style={{ background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: textPrimary }}>
           Ahorro mensual — últimos 12 meses
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '6px', alignItems: 'flex-end', height: '110px', borderBottom: `1px solid ${cardBorder}`, paddingBottom: '8px' }}>
-          {historial12Meses.map((m, idx) => (
-            <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-              <div 
-                style={{
-                  width: '100%',
-                  height: '8px',
-                  borderRadius: '4px',
-                  background: m.esSuperavit ? '#10b981' : '#ef4444',
-                  transition: 'all 0.3s'
-                }}
-                title={`${m.label}: RD$ ${m.ahorro.toLocaleString()}`}
-              />
-              <span style={{ fontSize: '9px', fontWeight: m.mes === mesSeleccionado ? 'bold' : 'normal', color: m.mes === mesSeleccionado ? textPrimary : textSecondary, marginTop: '8px' }}>
-                {m.label}
-              </span>
-            </div>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '6px', alignItems: 'flex-end', height: '120px', borderBottom: `1px solid ${cardBorder}`, paddingBottom: '8px' }}>
+          {historial12Meses.map((m, idx) => {
+            // Se asigna la altura dinámica según el balance del mes
+            const alturaPorcentaje = m.ahorro !== 0 
+              ? Math.max(12, Math.round((Math.abs(m.ahorro) / maxValorAbsoluto) * 100))
+              : 6;
+
+            return (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                <div 
+                  style={{
+                    width: '100%',
+                    height: `${alturaPorcentaje}%`,
+                    borderRadius: '4px 4px 0 0',
+                    background: m.ahorro === 0 ? cardBorder : (m.esSuperavit ? '#10b981' : '#ef4444'),
+                    transition: 'all 0.4s ease-in-out'
+                  }}
+                  title={`${m.label}: RD$ ${m.ahorro.toLocaleString()}`}
+                />
+                <span style={{ fontSize: '9px', fontWeight: m.mes === mesSeleccionado ? 'bold' : 'normal', color: m.mes === mesSeleccionado ? textPrimary : textSecondary, marginTop: '8px' }}>
+                  {m.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '10px', fontWeight: 'bold' }}>
