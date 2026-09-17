@@ -586,7 +586,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
       {/* Pie de Página */}
       <div style={{ textAlign: 'center', paddingTop: '4px' }}>
-        <span style={{ fontSize: '10px', fontWeight: '800', color textLabel, letterSpacing: '0.05em' }}>
+        <span style={{ fontSize: '10px', fontWeight: '800', color: textLabel, letterSpacing: '0.05em' }}>
           Gestión Financiera App • <span style={{ color: '#00e5ff' }}>{APP_VERSION}</span>
         </span>
       </div>
