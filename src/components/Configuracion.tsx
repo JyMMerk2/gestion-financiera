@@ -157,7 +157,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Creación y Vinculación Automática Infalible desde la App
+  // Creación y Vinculación en 2 Pasos Seguros (Sin error 406)
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!perfil?.id) return;
@@ -169,35 +169,34 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       let familiaId = perfil?.familia_id || perfil?.familias?.id;
 
       if (!familiaId) {
-        // 1. Crear la familia utilizando un ID garantizado si no existe aún
-        const { data: famNueva, error: errCrear } = await supabase
+        // 1. Insertar sin pedir retorno explícito (evita error HTTP 406)
+        const { error: errInsert } = await supabase
           .from('familias')
           .insert([{
             nombre: nomFinal,
             codigo_invitacion: codFinal,
             tasa_usd: Number(tasaUsd) || 60.00
-          }])
+          }]);
+
+        if (errInsert && !errInsert.message.includes('duplicate key')) {
+          throw errInsert;
+        }
+
+        // 2. Obtener la familia insertada mediante búsqueda limpia por su código
+        const { data: famTarget, error: errSelect } = await supabase
+          .from('familias')
           .select('id')
-          .maybeSingle();
+          .eq('codigo_invitacion', codFinal)
+          .limit(1)
+          .single();
 
-        if (famNueva?.id) {
-          familiaId = famNueva.id;
-        } else {
-          // Si Supabase no devuelve la fila por RLS, se busca por el código único creado
-          const { data: famBuscada } = await supabase
-            .from('familias')
-            .select('id')
-            .eq('codigo_invitacion', codFinal)
-            .single();
-
-          if (famBuscada) familiaId = famBuscada.id;
+        if (errSelect || !famTarget) {
+          throw new Error('No se pudo verificar el registro de la familia creada.');
         }
 
-        if (!familiaId) {
-          throw new Error('No se pudo obtener el ID del nuevo grupo familiar. Verifique los permisos RLS en Supabase.');
-        }
+        familiaId = famTarget.id;
 
-        // 2. Vincular familia_id al perfil del usuario actual
+        // 3. Vincular obligatoriamente en la tabla perfiles
         const { error: errPerfil } = await supabase
           .from('perfiles')
           .update({ familia_id: familiaId })
@@ -206,7 +205,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         if (errPerfil) throw errPerfil;
 
       } else {
-        // 3. Actualización de datos de la familia existente
+        // Actualización directa si ya estaba vinculado
         const { error: errUpdate } = await supabase
           .from('familias')
           .update({
@@ -218,13 +217,13 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         if (errUpdate) throw errUpdate;
       }
 
-      alert('¡Grupo familiar creado y vinculado a tu perfil exitosamente!');
+      alert('¡Grupo familiar creado y vinculado exitosamente!');
       setFamiliaActualNombre(nomFinal);
       setFamiliaActualCodigo(codFinal);
       await onPerfilActualizado();
       window.location.reload();
     } catch (err: any) {
-      alert('Error al guardar grupo familiar: ' + err.message);
+      alert('Detalle al guardar grupo familiar: ' + err.message);
     } finally {
       setGuardandoFamilia(false);
     }
