@@ -3,7 +3,7 @@ import { supabase } from '../services/supabase';
 import { TransaccionPresupuesto, TipoTransaccion } from '../types';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { WalletsManager } from './WalletsManager';
-import { ChevronLeft, ChevronRight, Calendar, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Trash2, Search } from 'lucide-react';
 
 interface PresupuestoProps {
   familiaId: string;
@@ -36,6 +36,9 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
   const [transacciones, setTransacciones] = useState<TransaccionPresupuesto[]>([]);
   const [walletsDinamicas, setWalletsDinamicas] = useState<WalletItem[]>([]);
   const [cargando, setCargando] = useState(false);
+
+  // Estado para la búsqueda en el historial
+  const [busqueda, setBusqueda] = useState('');
 
   const cambiarMes = (delta: number) => {
     const [year, month] = mesActual.split('-').map(Number);
@@ -122,6 +125,27 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
     cargarTransacciones();
   };
 
+  // Generar sugerencias únicas para el buscador
+  const sugerenciasBusqueda = Array.from(
+    new Set([
+      ...transacciones.map(t => t.categoria).filter(Boolean),
+      ...transacciones.map(t => t.concepto).filter(Boolean),
+      ...transacciones.map(t => t.wallet).filter(Boolean)
+    ])
+  );
+
+  // Filtrado de transacciones según lo ingresado en la búsqueda
+  const transaccionesFiltradas = transacciones.filter(t => {
+    if (!busqueda.trim()) return true;
+    const q = busqueda.toLowerCase();
+    return (
+      (t.concepto && t.concepto.toLowerCase().includes(q)) ||
+      (t.categoria && t.categoria.toLowerCase().includes(q)) ||
+      (t.wallet && t.wallet.toLowerCase().includes(q)) ||
+      (t.tipo && t.tipo.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
       
@@ -185,7 +209,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
               </div>
             </div>
 
-            <button type="submit" disabled={cargando} style={{ width: '100%', background: esOscuro ? '#10b981' : '#059669', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
+            <button type="submit" disabled={cargando} style={{ width: '100%', background: esOscuro ? '#00e5ff' : '#059669', color: esOscuro ? '#0a0e14' : '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
               {cargando ? 'Guardando...' : 'Guardar Transacción'}
             </button>
           </form>
@@ -196,9 +220,10 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
 
       </div>
 
-      {/* Columna Derecha: Historial con Selector de Mes */}
+      {/* Columna Derecha: Historial con Selector de Mes y Buscador */}
       <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
           <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
             📜 Historial Presupuesto
           </span>
@@ -209,7 +234,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
               <ChevronLeft size={14} />
             </button>
             <span style={{ fontSize: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Calendar size={12} color="#38bdf8" /> {obtenerNombreMes(mesActual)}
+              <Calendar size={12} color="#00e5ff" /> {obtenerNombreMes(mesActual)}
             </span>
             <button onClick={() => cambiarMes(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textPrimary, display: 'flex', alignItems: 'center' }}>
               <ChevronRight size={14} />
@@ -217,10 +242,44 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
           </div>
         </div>
 
-        <div style={{ maxHeight: '520px', overflowY: 'auto' }}>
-          {transacciones.length === 0 ? (
+        {/* Buscador de Transacciones con Sugerencias */}
+        <div style={{ position: 'relative', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '8px', padding: '6px 10px', gap: '8px' }}>
+            <Search size={14} color={textLabel} />
+            <input
+              type="text"
+              list="sugerencias-presupuesto"
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar por concepto, categoría o wallet..."
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: textPrimary,
+                fontSize: '11px',
+                outline: 'none'
+              }}
+            />
+            {busqueda && (
+              <button onClick={() => setBusqueda('')} style={{ background: 'none', border: 'none', color: textLabel, cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                ✕
+              </button>
+            )}
+          </div>
+
+          <datalist id="sugerencias-presupuesto">
+            {sugerenciasBusqueda.map((sug, i) => (
+              <option key={i} value={sug} />
+            ))}
+          </datalist>
+        </div>
+
+        {/* Tabla del Historial Filtrada */}
+        <div style={{ maxHeight: '480px', overflowY: 'auto' }}>
+          {transaccionesFiltradas.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '20px', color: textLabel, fontSize: '11px' }}>
-              Sin transacciones en {obtenerNombreMes(mesActual)}.
+              {busqueda ? `Sin resultados para "${busqueda}"` : `Sin transacciones en ${obtenerNombreMes(mesActual)}.`}
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
@@ -234,16 +293,19 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
                 </tr>
               </thead>
               <tbody>
-                {transacciones.map((row) => (
+                {transaccionesFiltradas.map((row) => (
                   <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
                     <td style={{ padding: '8px', color: textLabel }}>{row.fecha}</td>
                     <td style={{ padding: '8px' }}><b>{row.wallet}</b></td>
-                    <td style={{ padding: '8px' }}>{row.tipo} / {row.categoria}</td>
-                    <td style={{ padding: '8px', color: row.tipo === 'Ingreso' ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                    <td style={{ padding: '8px' }}>
+                      <b>{row.tipo}</b> <br />
+                      <small style={{ color: textLabel }}>{row.concepto || row.categoria}</small>
+                    </td>
+                    <td style={{ padding: '8px', color: row.tipo === 'Ingreso' ? '#00ff41' : '#ff007f', fontWeight: 'bold' }}>
                       {row.tipo === 'Ingreso' ? '+' : '-'} RD$ {Number(row.monto_dop).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td style={{ padding: '8px' }}>
-                      <button onClick={() => eliminarRegistro(row.id!)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>
+                      <button onClick={() => eliminarRegistro(row.id!)} style={{ background: '#ff007f', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>
                         <Trash2 size={13} />
                       </button>
                     </td>
