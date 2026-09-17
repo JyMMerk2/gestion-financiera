@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase';
+import { consultarTablaCompartida, insertarRegistroCompartido, obtenerFamiliaIdActiva } from '../services/familiaService';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { WalletsManager } from './WalletsManager';
 import { Trash2, Search, Edit2, X, PiggyBank } from 'lucide-react';
 
 interface AhorrosProps {
-  familiaId: string;
+  familiaId?: string;
   mesSeleccionado: string;
+  perfil?: any;
 }
 
 interface WalletItem {
@@ -15,7 +17,7 @@ interface WalletItem {
   moneda: string;
 }
 
-export const Ahorros: React.FC<AhorrosProps> = ({ familiaId, mesSeleccionado }) => {
+export const Ahorros: React.FC<AhorrosProps> = ({ mesSeleccionado, perfil }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
 
   const [fondo, setFondo] = useState('Fondo Emergencia 🚨');
@@ -35,13 +37,19 @@ export const Ahorros: React.FC<AhorrosProps> = ({ familiaId, mesSeleccionado }) 
   const [ahorros, setAhorros] = useState<any[]>([]);
   const [walletsDinamicas, setWalletsDinamicas] = useState<WalletItem[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [familiaActivaId, setFamiliaActivaId] = useState<string | null>(null);
 
-  const cargarWallets = async () => {
-    if (!familiaId) return;
+  // Carga dinámica de Wallets por Familia
+  const cargarWallets = useCallback(async () => {
+    const famId = perfil?.familia_id || perfil?.familias?.id || (await obtenerFamiliaIdActiva());
+    if (!famId) return;
+
+    setFamiliaActivaId(famId);
+
     const { data } = await supabase
       .from('wallets')
       .select('id, nombre, moneda')
-      .eq('familia_id', familiaId)
+      .eq('familia_id', famId)
       .order('created_at', { ascending: true });
 
     if (data && data.length > 0) {
@@ -51,26 +59,22 @@ export const Ahorros: React.FC<AhorrosProps> = ({ familiaId, mesSeleccionado }) 
     } else {
       setWalletsDinamicas([]);
     }
-  };
+  }, [perfil, walletOrigen, walletDestino]);
 
-  const cargarAhorros = async () => {
-    if (!familiaId) return;
-    const { data } = await supabase
-      .from('ahorros')
-      .select('*')
-      .eq('familia_id', familiaId)
-      .order('fecha', { ascending: false });
-
+  // Carga de registros compartidos desde el servicio
+  const cargarAhorros = useCallback(async () => {
+    const { data } = await consultarTablaCompartida('ahorros', 'fecha');
     if (data) {
       setAhorros(data.filter((row: any) => row.fecha.startsWith(mesSeleccionado)));
     }
-  };
+  }, [mesSeleccionado]);
 
   useEffect(() => {
     cargarAhorros();
     cargarWallets();
-  }, [familiaId, mesSeleccionado]);
+  }, [cargarAhorros, cargarWallets]);
 
+  // Guardado o edición de registros
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!monto || Number(monto) <= 0) return;
@@ -78,7 +82,6 @@ export const Ahorros: React.FC<AhorrosProps> = ({ familiaId, mesSeleccionado }) 
     setCargando(true);
     try {
       const payload = {
-        familia_id: familiaId,
         fecha,
         fondo: fondo.trim(),
         movimiento,
@@ -89,11 +92,12 @@ export const Ahorros: React.FC<AhorrosProps> = ({ familiaId, mesSeleccionado }) 
       };
 
       if (idEditando) {
-        await supabase.from('ahorros').update(payload).eq('id', idEditando);
+        const { error } = await supabase.from('ahorros').update(payload).eq('id', idEditando);
+        if (error) throw error;
         alert('¡Registro de ahorro actualizado!');
         setIdEditando(null);
       } else {
-        await supabase.from('ahorros').insert([payload]);
+        await insertarRegistroCompartido('ahorros', payload);
         alert('¡Registro de ahorro guardado!');
       }
 
@@ -241,8 +245,8 @@ export const Ahorros: React.FC<AhorrosProps> = ({ familiaId, mesSeleccionado }) 
           </form>
         </div>
 
-        {/* Administrador Dinámico de Wallets */}
-        <WalletsManager familiaId={familiaId} onWalletCambio={cargarWallets} />
+        {/* Administrador Dinámico de Wallets vinculado a la familia */}
+        <WalletsManager familiaId={familiaActivaId || ''} onWalletCambio={cargarWallets} />
 
       </div>
 
