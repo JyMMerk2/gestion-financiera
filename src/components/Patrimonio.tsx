@@ -39,13 +39,17 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
 
   const cargarPatrimonio = async () => {
     if (!familiaId) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('patrimonio')
       .select('*')
       .eq('familia_id', familiaId)
       .order('created_at', { ascending: false });
 
-    if (data) setActivos(data);
+    if (error) {
+      console.error('Error al cargar patrimonio:', error);
+    } else if (data) {
+      setActivos(data);
+    }
   };
 
   useEffect(() => {
@@ -55,24 +59,38 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombreBien.trim() || !valor) return;
+    if (!nombreBien.trim() || !valor || !familiaId) {
+      alert('Ingresa el nombre del bien y un valor válido.');
+      return;
+    }
 
     setCargando(true);
     try {
-      await supabase.from('patrimonio').insert([{
+      const valorNum = Number(valor) || 0;
+      const fechaVal = fecha || new Date().toISOString().split('T')[0];
+
+      const payload = {
         familia_id: familiaId,
         nombre_bien: nombreBien.trim(),
         tipo_bien: tipoBien,
-        valor_dop: Number(valor),
-        wallet: wallet || 'Efectivo',
-        fecha_registro: fecha
-      }]);
+        valor_dop: valorNum,
+        monto: valorNum,
+        wallet: wallet || (walletsDinamicas[0]?.nombre ?? 'Efectivo'),
+        fecha: fechaVal
+      };
 
-      setNombreBien('');
-      setValor('');
-      cargarPatrimonio();
+      const { error } = await supabase.from('patrimonio').insert([payload]);
+
+      if (error) {
+        alert('Error de Supabase al guardar patrimonio: ' + error.message);
+      } else {
+        alert('¡Bien/Patrimonio registrado exitosamente!');
+        setNombreBien('');
+        setValor('');
+        await cargarPatrimonio();
+      }
     } catch (err: any) {
-      alert('Error al guardar patrimonio: ' + err.message);
+      alert('Error inesperado: ' + err.message);
     } finally {
       setCargando(false);
     }
@@ -80,11 +98,15 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
 
   const eliminarActivo = async (id: string) => {
     if (!confirm('¿Deseas eliminar este bien del patrimonio?')) return;
-    await supabase.from('patrimonio').delete().eq('id', id);
-    cargarPatrimonio();
+    const { error } = await supabase.from('patrimonio').delete().eq('id', id);
+    if (error) {
+      alert('Error al eliminar: ' + error.message);
+    } else {
+      cargarPatrimonio();
+    }
   };
 
-  const totalPatrimonio = activos.reduce((acc, curr) => acc + Number(curr.valor_dop || 0), 0);
+  const totalPatrimonio = activos.reduce((acc, curr) => acc + Number(curr.valor_dop ?? curr.valor ?? curr.monto ?? 0), 0);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -152,39 +174,45 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
             🏛️ Historial de Patrimonio
           </span>
           <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8b5cf6' }}>
-            Total: RD$ {totalPatrimonio.toLocaleString()}
+            Total: RD$ {totalPatrimonio.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
 
         <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-            <thead>
-              <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
-                <th style={{ padding: '8px' }}>Fecha</th>
-                <th style={{ padding: '8px' }}>Bien / Inversión</th>
-                <th style={{ padding: '8px' }}>Wallet / Entidad</th>
-                <th style={{ padding: '8px' }}>Valor RD$</th>
-                <th style={{ padding: '8px' }}>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activos.map((row) => (
-                <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
-                  <td style={{ padding: '8px', color: textLabel }}>{row.fecha_registro}</td>
-                  <td style={{ padding: '8px' }}><b>{row.nombre_bien}</b> <br/><small style={{ color: textLabel }}>{row.tipo_bien}</small></td>
-                  <td style={{ padding: '8px' }}><b>{row.wallet || 'Efectivo'}</b></td>
-                  <td style={{ padding: '8px', color: '#8b5cf6', fontWeight: 'bold' }}>
-                    RD$ {Number(row.valor_dop).toLocaleString()}
-                  </td>
-                  <td style={{ padding: '8px' }}>
-                    <button onClick={() => eliminarActivo(row.id!)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                      <Trash2 size={13} />
-                    </button>
-                  </td>
+          {activos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: textLabel, fontSize: '11px' }}>
+              No tienes bienes registrados en el patrimonio.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
+                  <th style={{ padding: '8px' }}>Fecha</th>
+                  <th style={{ padding: '8px' }}>Bien / Inversión</th>
+                  <th style={{ padding: '8px' }}>Wallet / Entidad</th>
+                  <th style={{ padding: '8px' }}>Valor RD$</th>
+                  <th style={{ padding: '8px' }}>Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {activos.map((row) => (
+                  <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
+                    <td style={{ padding: '8px', color: textLabel }}>{row.fecha || row.fecha_registro}</td>
+                    <td style={{ padding: '8px' }}><b>{row.nombre_bien || row.concepto}</b> <br/><small style={{ color: textLabel }}>{row.tipo_bien || row.tipo}</small></td>
+                    <td style={{ padding: '8px' }}><b>{row.wallet || 'Efectivo'}</b></td>
+                    <td style={{ padding: '8px', color: '#8b5cf6', fontWeight: 'bold' }}>
+                      RD$ {Number(row.valor_dop ?? row.valor ?? row.monto ?? 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      <button onClick={() => eliminarActivo(row.id!)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
