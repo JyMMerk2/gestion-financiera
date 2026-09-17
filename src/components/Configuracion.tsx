@@ -84,11 +84,11 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardandoUsuario(true);
     try {
+      // Actualización exclusiva de la columna 'nombre_usuario' para evitar conflictos con el esquema
       const { error } = await supabase
         .from('perfiles')
         .update({
-          nombre_usuario: nombreUsuario.trim(),
-          nombre: nombreUsuario.trim()
+          nombre_usuario: nombreUsuario.trim()
         })
         .eq('id', perfil.id);
 
