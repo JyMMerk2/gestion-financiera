@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase';
+import { consultarTablaCompartida, insertarRegistroCompartido } from '../services/familiaService';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { ExternalLink, CheckSquare, Square, Trash2, Search, Edit2, X, Target } from 'lucide-react';
 
 interface MetasProps {
-  familiaId: string;
+  familiaId?: string;
   perfil?: any;
 }
 
@@ -19,11 +20,8 @@ interface ItemMeta {
   moneda_item?: 'RD$' | 'USD' | 'EUR';
 }
 
-export const Metas: React.FC<MetasProps> = ({ familiaId, perfil }) => {
+export const Metas: React.FC<MetasProps> = ({ perfil }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
-
-  // Resolución segura del ID de la Familia activa
-  const idFamiliaActiva = familiaId || perfil?.familia_id || perfil?.familias?.id;
 
   const [titulo, setTitulo] = useState('');
   const [nuevaCategoria, setNuevaCategoria] = useState('');
@@ -44,17 +42,11 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, perfil }) => {
   const tasaUsd = perfil?.familias?.tasa_usd || 60.00;
   const tasaEur = perfil?.familias?.tasa_eur || 65.00;
 
+  // Carga compartida desde familiaService.ts
   const cargarMetas = useCallback(async () => {
-    if (!idFamiliaActiva) return;
-
-    const { data } = await supabase
-      .from('metas')
-      .select('*')
-      .eq('familia_id', idFamiliaActiva)
-      .order('created_at', { ascending: true });
-
+    const { data } = await consultarTablaCompartida('metas', 'created_at');
     if (data) setMetas(data);
-  }, [idFamiliaActiva]);
+  }, []);
 
   useEffect(() => {
     cargarMetas();
@@ -72,14 +64,13 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, perfil }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titulo.trim() || !idFamiliaActiva) return;
+    if (!titulo.trim()) return;
 
     const categoriaFinal = nuevaCategoria.trim() ? nuevaCategoria.trim() : categoria;
 
     setCargando(true);
     try {
       const payload = {
-        familia_id: idFamiliaActiva,
         categoria: categoriaFinal,
         titulo: titulo.trim(),
         completado: false,
@@ -94,8 +85,7 @@ export const Metas: React.FC<MetasProps> = ({ familiaId, perfil }) => {
         alert('¡Objetivo actualizado!');
         setIdEditando(null);
       } else {
-        const { error } = await supabase.from('metas').insert([payload]);
-        if (error) throw error;
+        await insertarRegistroCompartido('metas', payload);
         alert('¡Objetivo registrado!');
       }
 
