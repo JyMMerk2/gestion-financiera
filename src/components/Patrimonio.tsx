@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { WalletsManager } from './WalletsManager';
-import { Trash2, Edit2, PieChart, Landmark, X } from 'lucide-react';
+import { Trash2, Edit2, PieChart, Landmark, X, Search } from 'lucide-react';
 
 interface PatrimonioProps {
   familiaId: string;
 }
 
 export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
-  const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
+  const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
 
   // Campos Formulario
   const [nombreBien, setNombreBien] = useState('');
@@ -20,6 +20,9 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
 
   // Estado para Edición
   const [idEditando, setIdEditando] = useState<string | null>(null);
+
+  // Estado para Buscador Interactivo
+  const [busqueda, setBusqueda] = useState('');
 
   const [activos, setActivos] = useState<any[]>([]);
   const [walletsDinamicas, setWalletsDinamicas] = useState<any[]>([]);
@@ -140,25 +143,44 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
   }, {});
 
   const coloresCategorias: Record<string, string> = {
-    'Acciones / Inversiones': '#8b5cf6',
+    'Acciones / Inversiones': '#00e5ff',
     'Inmueble / Terreno': '#38bdf8',
-    'Vehículo': '#f59e0b',
-    'Otros Activos': '#10b981'
+    'Vehículo': '#ffea00',
+    'Otros Activos': '#00ff41'
   };
+
+  // Sugerencias autocompletables
+  const sugerenciasBusqueda = Array.from(
+    new Set([
+      ...activos.map(a => a.nombre || a.nombre_bien).filter(Boolean),
+      ...activos.map(a => a.tipo_bien).filter(Boolean),
+      ...activos.map(a => a.wallet).filter(Boolean)
+    ])
+  );
+
+  // Filtrado de la tabla según la búsqueda
+  const activosFiltrados = activos.filter(row => {
+    if (!busqueda.trim()) return true;
+    const q = busqueda.toLowerCase();
+    const nombre = (row.nombre || row.nombre_bien || '').toLowerCase();
+    const tipo = (row.tipo_bien || '').toLowerCase();
+    const w = (row.wallet || '').toLowerCase();
+    return nombre.includes(q) || tipo.includes(q) || w.includes(q);
+  });
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
       
       {/* Formulario + Administrador de Cuentas */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div style={{ background: bgCard, border: `1px solid ${idEditando ? '#f59e0b' : borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
-          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: idEditando ? '#f59e0b' : textTitle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ background: bgCard, border: `1px solid ${idEditando ? '#ffea00' : borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: idEditando ? '#ffea00' : textTitle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Landmark size={14} color={idEditando ? '#f59e0b' : '#8b5cf6'} /> 
+              <Landmark size={14} color={idEditando ? '#ffea00' : '#00e5ff'} /> 
               {idEditando ? '✏️ Editando Registro de Patrimonio' : '💎 Registrar Activo / Bien / Acciones'}
             </span>
             {idEditando && (
-              <button onClick={cancelarEdicion} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px', fontWeight: 'bold' }}>
+              <button onClick={cancelarEdicion} style={{ background: 'transparent', border: 'none', color: '#ff007f', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px', fontWeight: 'bold' }}>
                 <X size={12} /> Cancelar
               </button>
             )}
@@ -168,10 +190,10 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
             <div style={{ marginBottom: '8px' }}>
               <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo de Activo</label>
               <select value={tipoBien} onChange={e => setTipoBien(e.target.value)} style={inputStyle}>
-                <option value="Acciones / Inversiones">📈 Acciones / Inversiones / Cooperativa</option>
-                <option value="Inmueble / Terreno">🏠 Inmueble / Terreno / Casa</option>
-                <option value="Vehículo">🚗 Vehículo</option>
-                <option value="Otros Activos">💼 Otros Activos de Valor</option>
+                <option value="Acciones / Inversiones" style={{ background: bgCard, color: textPrimary }}>📈 Acciones / Inversiones / Cooperativa</option>
+                <option value="Inmueble / Terreno" style={{ background: bgCard, color: textPrimary }}>🏠 Inmueble / Terreno / Casa</option>
+                <option value="Vehículo" style={{ background: bgCard, color: textPrimary }}>🚗 Vehículo</option>
+                <option value="Otros Activos" style={{ background: bgCard, color: textPrimary }}>💼 Otros Activos de Valor</option>
               </select>
             </div>
 
@@ -189,10 +211,10 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Entidad Institucional</label>
                 <select value={wallet} onChange={e => setWallet(e.target.value)} style={inputStyle}>
                   {walletsDinamicas.length === 0 ? (
-                    <option value="Efectivo">Efectivo</option>
+                    <option value="Efectivo" style={{ background: bgCard, color: textPrimary }}>Efectivo</option>
                   ) : (
                     walletsDinamicas.map(w => (
-                      <option key={w.id} value={w.nombre}>{w.nombre} ({w.moneda})</option>
+                      <option key={w.id} value={w.nombre} style={{ background: bgCard, color: textPrimary }}>{w.nombre} ({w.moneda})</option>
                     ))
                   )}
                 </select>
@@ -204,7 +226,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
               <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
             </div>
 
-            <button type="submit" disabled={cargando} style={{ width: '100%', background: idEditando ? '#f59e0b' : '#8b5cf6', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
+            <button type="submit" disabled={cargando} style={{ width: '100%', background: idEditando ? '#ffea00' : (esOscuro ? '#00e5ff' : '#0284c7'), color: idEditando || esOscuro ? '#0a0e14' : '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
               {cargando ? 'Guardando...' : (idEditando ? 'Actualizar Registro' : 'Registrar Patrimonio')}
             </button>
           </form>
@@ -219,7 +241,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
         {/* Panel de Gráfica por Categoría */}
         <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
           <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <PieChart size={14} color="#38bdf8" /> Distribución por Categoria
+            <PieChart size={14} color="#00e5ff" /> Distribución por Categoria
           </div>
 
           {totalPatrimonio === 0 ? (
@@ -231,7 +253,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
               {Object.keys(distribucionCategorias).map(cat => {
                 const montoCat = distribucionCategorias[cat];
                 const pct = ((montoCat / totalPatrimonio) * 100).toFixed(1);
-                const colorCat = coloresCategorias[cat] || '#8b5cf6';
+                const colorCat = coloresCategorias[cat] || '#00e5ff';
 
                 return (
                   <div key={cat}>
@@ -249,21 +271,54 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
           )}
         </div>
 
-        {/* Historial con opción de Edición */}
-        <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
+        {/* Historial con opción de Edición y Buscador Interactivo */}
+        <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
             <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
               🏛️ Historial de Patrimonio
             </span>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8b5cf6' }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00e5ff' }}>
               Total: RD$ {totalPatrimonio.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
+          {/* Buscador Interactivo con Datalist */}
+          <div style={{ position: 'relative', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '8px', padding: '6px 10px', gap: '8px' }}>
+              <Search size={14} color={textLabel} />
+              <input
+                type="text"
+                list="sugerencias-patrimonio"
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+                placeholder="Buscar bien, tipo o wallet..."
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: 'none',
+                  color: textPrimary,
+                  fontSize: '11px',
+                  outline: 'none'
+                }}
+              />
+              {busqueda && (
+                <button onClick={() => setBusqueda('')} style={{ background: 'none', border: 'none', color: textLabel, cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <datalist id="sugerencias-patrimonio">
+              {sugerenciasBusqueda.map((sug, i) => (
+                <option key={i} value={sug} />
+              ))}
+            </datalist>
+          </div>
+
           <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {activos.length === 0 ? (
+            {activosFiltrados.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '20px', color: textLabel, fontSize: '11px' }}>
-                No tienes bienes registrados en el patrimonio.
+                {busqueda ? `Sin resultados para "${busqueda}"` : 'No tienes bienes registrados en el patrimonio.'}
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
@@ -277,20 +332,20 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {activos.map((row) => (
-                    <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}`, background: idEditando === row.id ? 'rgba(245, 158, 11, 0.1)' : 'transparent' }}>
+                  {activosFiltrados.map((row) => (
+                    <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}`, background: idEditando === row.id ? 'rgba(255, 234, 0, 0.1)' : 'transparent' }}>
                       <td style={{ padding: '8px', color: textLabel }}>{row.fecha || row.fecha_registro}</td>
                       <td style={{ padding: '8px' }}><b>{row.nombre || row.nombre_bien}</b> <br/><small style={{ color: textLabel }}>{row.tipo_bien}</small></td>
                       <td style={{ padding: '8px' }}><b>{row.wallet || 'Efectivo'}</b></td>
-                      <td style={{ padding: '8px', color: '#8b5cf6', fontWeight: 'bold' }}>
+                      <td style={{ padding: '8px', color: '#00e5ff', fontWeight: 'bold' }}>
                         RD$ {Number(row.valor_dop || row.valor || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td style={{ padding: '8px' }}>
                         <div style={{ display: 'flex', gap: '6px' }}>
-                          <button onClick={() => iniciarEdicion(row)} title="Editar registro" style={{ background: 'transparent', border: 'none', color: '#f59e0b', cursor: 'pointer' }}>
+                          <button onClick={() => iniciarEdicion(row)} title="Editar registro" style={{ background: 'transparent', border: 'none', color: '#ffea00', cursor: 'pointer' }}>
                             <Edit2 size={13} />
                           </button>
-                          <button onClick={() => eliminarActivo(row.id!)} title="Eliminar registro" style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                          <button onClick={() => eliminarActivo(row.id!)} title="Eliminar registro" style={{ background: 'transparent', border: 'none', color: '#ff007f', cursor: 'pointer' }}>
                             <Trash2 size={13} />
                           </button>
                         </div>
