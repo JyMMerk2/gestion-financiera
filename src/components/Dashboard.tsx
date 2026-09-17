@@ -53,6 +53,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
     return `${nombres[parseInt(month, 10) - 1]} ${year}`;
   };
 
+  // Función para abreviar cifras grandes sobre cada barra
+  const formatearMontoCorto = (monto: number) => {
+    if (monto === 0) return '';
+    if (monto >= 1000000) return `${(monto / 1000000).toFixed(1)}M`;
+    if (monto >= 1000) return `${(monto / 1000).toFixed(0)}k`;
+    return `${monto.toFixed(0)}`;
+  };
+
   useEffect(() => {
     const familiaId = perfil?.familia_id || perfil?.familias?.id;
     if (!familiaId) return;
@@ -284,13 +292,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
         </div>
       </div>
 
-      {/* Bloque 2: Gráfica de Doble Barra Interactiva (Hacer Clic Selecciona el Mes) */}
+      {/* Bloque 2: Gráfica de Doble Barra Interactiva con Tooltip y Etiqueta Superior */}
       <div style={{ background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: modoOscuro ? '#00e5ff' : textPrimary, letterSpacing: '0.05em' }}>
           Flujo de dinero (Ingresos vs. Gastos) — últimos 12 meses
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px', alignItems: 'flex-end', height: '110px', borderBottom: `1px solid ${cardBorder}`, paddingBottom: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px', alignItems: 'flex-end', height: '130px', borderBottom: `1px solid ${cardBorder}`, paddingBottom: '8px' }}>
           {historial12Meses.map((m, idx) => {
             const hIngreso = m.ingresos > 0 ? Math.max(8, Math.min(65, Math.round((m.ingresos / maxMontoGlobal) * 65))) : 4;
             const hGasto = m.gastos > 0 ? Math.max(8, Math.min(65, Math.round((m.gastos / maxMontoGlobal) * 65))) : 4;
@@ -313,8 +321,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
                   border: esActivo && modoOscuro ? '1px solid #00e5ff55' : 'none',
                   transition: 'all 0.2s ease'
                 }}
-                title={`Hacer clic para filtrar por ${m.label}`}
+                title={`${m.label}: Ingresos RD$ ${m.ingresos.toLocaleString('en-US', { minimumFractionDigits: 2 })} | Gastos RD$ ${m.gastos.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
               >
+                {/* Etiqueta superior corta con el valor mayor del mes */}
+                <div style={{ fontSize: '8px', fontWeight: 'bold', color: textSecondary, marginBottom: '4px', height: '12px', textAlign: 'center' }}>
+                  {formatearMontoCorto(Math.max(m.ingresos, m.gastos))}
+                </div>
+
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', width: '100%', justifyContent: 'center' }}>
                   {/* Barra Verde Neón - Ingresos */}
                   <div 
@@ -327,7 +340,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
                       boxShadow: m.ingresos > 0 && modoOscuro ? '0 0 8px rgba(0, 255, 65, 0.4)' : 'none',
                       transition: 'all 0.3s ease'
                     }}
-                    title={`${m.label} Ingresos: RD$ ${m.ingresos.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                    title={`Ingresos: RD$ ${m.ingresos.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                   />
                   {/* Barra Magenta Neón - Gastos */}
                   <div 
@@ -340,7 +353,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
                       boxShadow: m.gastos > 0 && modoOscuro ? '0 0 8px rgba(255, 0, 127, 0.4)' : 'none',
                       transition: 'all 0.3s ease'
                     }}
-                    title={`${m.label} Gastos: RD$ ${m.gastos.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                    title={`Gastos: RD$ ${m.gastos.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                   />
                 </div>
                 <span style={{ fontSize: '9px', fontWeight: esActivo ? 'bold' : 'normal', color: esActivo ? '#00e5ff' : textSecondary, marginTop: '8px' }}>
