@@ -74,7 +74,6 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
         nombre_bien: nombreBien.trim(),
         tipo_bien: tipoBien,
         valor_dop: valorNum,
-        monto: valorNum,
         wallet: wallet || (walletsDinamicas[0]?.nombre ?? 'Efectivo'),
         fecha: fechaVal
       };
@@ -106,7 +105,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
     }
   };
 
-  const totalPatrimonio = activos.reduce((acc, curr) => acc + Number(curr.valor_dop ?? curr.valor ?? curr.monto ?? 0), 0);
+  const totalPatrimonio = activos.reduce((acc, curr) => acc + Number(curr.valor_dop || 0), 0);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -197,11 +196,11 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
               <tbody>
                 {activos.map((row) => (
                   <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
-                    <td style={{ padding: '8px', color: textLabel }}>{row.fecha || row.fecha_registro}</td>
-                    <td style={{ padding: '8px' }}><b>{row.nombre_bien || row.concepto}</b> <br/><small style={{ color: textLabel }}>{row.tipo_bien || row.tipo}</small></td>
+                    <td style={{ padding: '8px', color: textLabel }}>{row.fecha}</td>
+                    <td style={{ padding: '8px' }}><b>{row.nombre_bien}</b> <br/><small style={{ color: textLabel }}>{row.tipo_bien}</small></td>
                     <td style={{ padding: '8px' }}><b>{row.wallet || 'Efectivo'}</b></td>
                     <td style={{ padding: '8px', color: '#8b5cf6', fontWeight: 'bold' }}>
-                      RD$ {Number(row.valor_dop ?? row.valor ?? row.monto ?? 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      RD$ {Number(row.valor_dop || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td style={{ padding: '8px' }}>
                       <button onClick={() => eliminarActivo(row.id!)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
