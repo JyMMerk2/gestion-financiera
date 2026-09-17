@@ -21,6 +21,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   const [guardandoUsuario, setGuardandoUsuario] = useState(false);
 
   // Estados de Seguridad / Contraseña
+  const [passwordActual, setPasswordActual] = useState('');
   const [nuevaPassword, setNuevaPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
   const [guardandoPassword, setGuardandoPassword] = useState(false);
@@ -107,10 +108,14 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
   const handleCambiarPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevaPassword) return;
+
+    if (!passwordActual) {
+      alert('Debes ingresar tu contraseña actual.');
+      return;
+    }
 
     if (nuevaPassword.length < 6) {
-      alert('La contraseña debe tener un mínimo de 6 caracteres.');
+      alert('La contraseña nueva debe tener un mínimo de 6 caracteres.');
       return;
     }
 
@@ -121,14 +126,31 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardandoPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Validar primero la contraseña actual volviendo a autenticar al usuario
+      const userEmail = perfil?.email;
+      if (!userEmail) throw new Error('No se pudo verificar el correo electrónico del usuario.');
+
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: passwordActual
+      });
+
+      if (authError) {
+        alert('La contraseña actual ingresada es incorrecta.');
+        setGuardandoPassword(false);
+        return;
+      }
+
+      // Si la contraseña actual es correcta, actualizar a la nueva contraseña
+      const { error: updateError } = await supabase.auth.updateUser({
         password: nuevaPassword
       });
 
-      if (error) {
-        alert('Error al cambiar contraseña: ' + error.message);
+      if (updateError) {
+        alert('Error al cambiar contraseña: ' + updateError.message);
       } else {
         alert('¡Contraseña actualizada correctamente!');
+        setPasswordActual('');
         setNuevaPassword('');
         setConfirmarPassword('');
       }
@@ -305,10 +327,24 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </button>
       </form>
 
-      {/* Bloque 2: Cambiar Contraseña */}
+      {/* Bloque 2: Cambiar Contraseña con Verificación de Clave Actual */}
       <form onSubmit={handleCambiarPassword} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <KeyRound size={14} color="#00ff41" /> Seguridades y Contraseña
+        </div>
+
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
+            Contraseña Actual
+          </label>
+          <input
+            type="password"
+            required
+            value={passwordActual}
+            onChange={(e) => setPasswordActual(e.target.value)}
+            placeholder="Ingrese su contraseña actual"
+            style={inputStyle}
+          />
         </div>
 
         <div style={{ marginBottom: '10px' }}>
@@ -344,7 +380,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           disabled={guardandoPassword}
           style={{ width: '100%', background: '#00ff41', color: '#0a0e14', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
         >
-          {guardandoPassword ? 'Cambiando...' : 'Guardar Nueva Contraseña'}
+          {guardandoPassword ? 'Verificando y Cambiando...' : 'Guardar Nueva Contraseña'}
         </button>
       </form>
 
