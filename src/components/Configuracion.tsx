@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
-import { Copy, Share2, Check, RefreshCw, KeyRound, User, Users, Key, DollarSign } from 'lucide-react';
+import { Copy, Share2, Check, RefreshCw, KeyRound, User, Users, Key, DollarSign, ShieldCheck } from 'lucide-react';
 
 interface ConfiguracionProps {
   perfil: any;
@@ -32,6 +32,10 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   const [codigoUnirse, setCodigoUnirse] = useState('');
   const [guardandoFamilia, setGuardandoFamilia] = useState(false);
 
+  // Datos de Familia Activa
+  const [familiaActualNombre, setFamiliaActualNombre] = useState('Sin Grupo Familiar');
+  const [familiaActualCodigo, setFamiliaActualCodigo] = useState('N/A');
+
   // Estados de Tasas
   const [tasaUsd, setTasaUsd] = useState('60.00');
   const [tasaEur, setTasaEur] = useState('65.00');
@@ -46,8 +50,12 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     if (perfil) {
       setNombreUsuario(perfil.nombre_usuario || perfil.nombre || '');
       if (perfil.familias) {
-        setNombreFamilia(perfil.familias.nombre || '');
-        setCodigoInvitacion(perfil.familias.codigo_invitacion || '');
+        const nomFam = perfil.familias.nombre || '';
+        const codFam = perfil.familias.codigo_invitacion || '';
+        setNombreFamilia(nomFam);
+        setCodigoInvitacion(codFam);
+        setFamiliaActualNombre(nomFam || 'Sin Grupo Familiar');
+        setFamiliaActualCodigo(codFam || 'N/A');
         if (perfil.familias.tasa_usd) setTasaUsd(String(perfil.familias.tasa_usd));
       }
     }
@@ -88,7 +96,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardandoUsuario(true);
     try {
-      // Actualización exclusiva de la columna 'nombre_usuario' para evitar conflictos con el esquema
       const { error } = await supabase
         .from('perfiles')
         .update({
@@ -129,7 +136,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardandoPassword(true);
     try {
-      // Validar primero la contraseña actual volviendo a autenticar al usuario
       const userEmail = perfil?.email;
       if (!userEmail) throw new Error('No se pudo verificar el correo electrónico del usuario.');
 
@@ -144,7 +150,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         return;
       }
 
-      // Si la contraseña actual es correcta, actualizar a la nueva contraseña
       const { error: updateError } = await supabase.auth.updateUser({
         password: nuevaPassword
       });
@@ -164,21 +169,23 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Guardado inteligente del Grupo Familiar y vinculación automática
+  // Guardado de la Familia con Vinculación Directa en Perfil
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuardandoFamilia(true);
 
     try {
       let familiaId = perfil?.familia_id || perfil?.familias?.id;
+      const nomFinal = nombreFamilia.trim() || 'Mi Grupo Familiar';
+      const codFinal = codigoInvitacion.trim().toUpperCase() || 'FAMILIA-2026';
 
       if (!familiaId) {
-        // Si el usuario no tiene familia asignada, creamos una nueva
+        // 1. Crear nuevo registro en la tabla 'familias'
         const { data: nuevaFam, error: errCrear } = await supabase
           .from('familias')
           .insert([{
-            nombre: nombreFamilia.trim() || 'Mi Grupo Familiar',
-            codigo_invitacion: codigoInvitacion.trim().toUpperCase() || 'FAMILIA-2026',
+            nombre: nomFinal,
+            codigo_invitacion: codFinal,
             tasa_usd: Number(tasaUsd) || 60.00
           }])
           .select()
@@ -187,22 +194,30 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         if (errCrear) throw errCrear;
         familiaId = nuevaFam.id;
 
-        // Vinculamos el ID de la nueva familia en el perfil del usuario
+        // 2. Vincular el id de la nueva familia en el perfil del usuario
+        const { error: errPerfil } = await supabase
+          .from('perfiles')
+          .update({ familia_id: familiaId })
+          .eq('id', perfil.id);
+
+        if (errPerfil) throw errPerfil;
+      } else {
+        // 3. Actualizar la familia existente
+        const { error: errUpdate } = await supabase
+          .from('familias')
+          .update({
+            nombre: nomFinal,
+            codigo_invitacion: codFinal
+          })
+          .eq('id', familiaId);
+
+        if (errUpdate) throw errUpdate;
+
+        // Asegurar que la relación esté activa
         await supabase
           .from('perfiles')
           .update({ familia_id: familiaId })
           .eq('id', perfil.id);
-      } else {
-        // Si ya existe, actualizamos los datos de la familia
-        const { error } = await supabase
-          .from('familias')
-          .update({
-            nombre: nombreFamilia.trim(),
-            codigo_invitacion: codigoInvitacion.trim().toUpperCase()
-          })
-          .eq('id', familiaId);
-
-        if (error) throw error;
       }
 
       alert('¡Grupo familiar guardado y vinculado correctamente!');
@@ -375,7 +390,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </button>
       </form>
 
-      {/* Bloque 2: Cambiar Contraseña con Verificación de Clave Actual */}
+      {/* Bloque 2: Cambiar Contraseña */}
       <form onSubmit={handleCambiarPassword} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <KeyRound size={14} color="#00ff41" /> Seguridades y Contraseña
@@ -436,6 +451,21 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       <form onSubmit={handleGuardarFamilia} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Users size={14} color="#ffea00" /> Grupo Familiar y Compartir
+        </div>
+
+        {/* Panel Informativo del Estado Actual de la Familia */}
+        <div style={{ background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '10px', padding: '12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 'bold', color: textLabel, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <ShieldCheck size={13} color="#00ff41" /> Estado Actual del Grupo
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+            <span style={{ color: textLabel }}>Nombre Actual:</span>
+            <b style={{ color: '#00e5ff' }}>{familiaActualNombre}</b>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+            <span style={{ color: textLabel }}>Código Vincular:</span>
+            <b style={{ color: '#ffea00', letterSpacing: '1px' }}>{familiaActualCodigo}</b>
+          </div>
         </div>
 
         <div style={{ marginBottom: '14px' }}>
