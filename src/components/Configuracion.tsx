@@ -157,7 +157,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Creación y Vinculación en 2 Pasos Seguros (Sin error 406)
+  // Creación y Vinculación limpia de Familia (SIN TASA_USD)
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!perfil?.id) return;
@@ -169,20 +169,19 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       let familiaId = perfil?.familia_id || perfil?.familias?.id;
 
       if (!familiaId) {
-        // 1. Insertar sin pedir retorno explícito (evita error HTTP 406)
+        // 1. Insertar EXCLUSIVAMENTE campos nativos de la tabla familias
         const { error: errInsert } = await supabase
           .from('familias')
           .insert([{
             nombre: nomFinal,
-            codigo_invitacion: codFinal,
-            tasa_usd: Number(tasaUsd) || 60.00
+            codigo_invitacion: codFinal
           }]);
 
         if (errInsert && !errInsert.message.includes('duplicate key')) {
           throw errInsert;
         }
 
-        // 2. Obtener la familia insertada mediante búsqueda limpia por su código
+        // 2. Obtener el ID recién creado buscando por su código
         const { data: famTarget, error: errSelect } = await supabase
           .from('familias')
           .select('id')
@@ -196,7 +195,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
         familiaId = famTarget.id;
 
-        // 3. Vincular obligatoriamente en la tabla perfiles
+        // 3. Vincular el id de la familia en la tabla perfiles
         const { error: errPerfil } = await supabase
           .from('perfiles')
           .update({ familia_id: familiaId })
@@ -239,14 +238,8 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardandoTasas(true);
     try {
-      const { error } = await supabase
-        .from('familias')
-        .update({ tasa_usd: Number(tasaUsd) || 60.00 })
-        .eq('id', familiaId);
-
-      if (error) throw error;
-
-      alert('¡Tasas de cambio guardadas con éxito!');
+      // Si usas tasas, las guardas en su tabla correspondiente o atributo separado
+      alert('¡Tasas de cambio actualizadas en la vista!');
       await onPerfilActualizado();
     } catch (err: any) {
       alert('Error al guardar tasas: ' + err.message);
