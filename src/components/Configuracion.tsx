@@ -88,6 +88,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardandoUsuario(true);
     try {
+      // Actualización exclusiva de la columna 'nombre_usuario' para evitar conflictos con el esquema
       const { error } = await supabase
         .from('perfiles')
         .update({
@@ -128,6 +129,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardandoPassword(true);
     try {
+      // Validar primero la contraseña actual volviendo a autenticar al usuario
       const userEmail = perfil?.email;
       if (!userEmail) throw new Error('No se pudo verificar el correo electrónico del usuario.');
 
@@ -142,6 +144,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         return;
       }
 
+      // Si la contraseña actual es correcta, actualizar a la nueva contraseña
       const { error: updateError } = await supabase.auth.updateUser({
         password: nuevaPassword
       });
@@ -161,33 +164,52 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Guardado independiente del Grupo Familiar
+  // Guardado inteligente del Grupo Familiar y vinculación automática
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
-    const familiaId = perfil?.familia_id || perfil?.familias?.id;
-    if (!familiaId) {
-      alert('No tienes un ID de familia asignado.');
-      return;
-    }
-
     setGuardandoFamilia(true);
-    try {
-      const { error } = await supabase
-        .from('familias')
-        .update({
-          nombre: nombreFamilia.trim(),
-          codigo_invitacion: codigoInvitacion.trim().toUpperCase()
-        })
-        .eq('id', familiaId);
 
-      if (error) {
-        alert('Error al actualizar la familia: ' + error.message);
+    try {
+      let familiaId = perfil?.familia_id || perfil?.familias?.id;
+
+      if (!familiaId) {
+        // Si el usuario no tiene familia asignada, creamos una nueva
+        const { data: nuevaFam, error: errCrear } = await supabase
+          .from('familias')
+          .insert([{
+            nombre: nombreFamilia.trim() || 'Mi Grupo Familiar',
+            codigo_invitacion: codigoInvitacion.trim().toUpperCase() || 'FAMILIA-2026',
+            tasa_usd: Number(tasaUsd) || 60.00
+          }])
+          .select()
+          .single();
+
+        if (errCrear) throw errCrear;
+        familiaId = nuevaFam.id;
+
+        // Vinculamos el ID de la nueva familia en el perfil del usuario
+        await supabase
+          .from('perfiles')
+          .update({ familia_id: familiaId })
+          .eq('id', perfil.id);
       } else {
-        alert('¡Datos de la familia actualizados con éxito!');
-        await onPerfilActualizado();
+        // Si ya existe, actualizamos los datos de la familia
+        const { error } = await supabase
+          .from('familias')
+          .update({
+            nombre: nombreFamilia.trim(),
+            codigo_invitacion: codigoInvitacion.trim().toUpperCase()
+          })
+          .eq('id', familiaId);
+
+        if (error) throw error;
       }
+
+      alert('¡Grupo familiar guardado y vinculado correctamente!');
+      await onPerfilActualizado();
+      window.location.reload();
     } catch (err: any) {
-      alert('Error inesperado: ' + err.message);
+      alert('Error al guardar la familia: ' + err.message);
     } finally {
       setGuardandoFamilia(false);
     }
@@ -198,7 +220,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     e.preventDefault();
     const familiaId = perfil?.familia_id || perfil?.familias?.id;
     if (!familiaId) {
-      alert('No tienes un ID de familia asignado.');
+      alert('Primero debes guardar el Grupo Familiar para asignar las tasas.');
       return;
     }
 
@@ -353,7 +375,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </button>
       </form>
 
-      {/* Bloque 2: Cambiar Contraseña */}
+      {/* Bloque 2: Cambiar Contraseña con Verificación de Clave Actual */}
       <form onSubmit={handleCambiarPassword} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <KeyRound size={14} color="#00ff41" /> Seguridades y Contraseña
