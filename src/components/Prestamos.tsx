@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { WalletsManager } from './WalletsManager';
-import { AlertCircle, Trash2 } from 'lucide-react';
+import { AlertCircle, Trash2, Edit2, Search, X, CreditCard } from 'lucide-react';
 
 interface PrestamosProps {
   familiaId: string;
 }
 
 export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
-  const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput } = useModoOscuro();
+  const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
 
   const [modoFormulario, setModoFormulario] = useState<'registrar' | 'pagar'>('registrar');
 
-  // Campos Registro
+  // Campos Registro / Edición
   const [acreedor, setAcreedor] = useState('');
   const [tipo, setTipo] = useState<'Por Pagar' | 'Por Cobrar'>('Por Pagar');
   const [montoOriginal, setMontoOriginal] = useState('');
@@ -23,6 +23,12 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
   const [montoAtraso, setMontoAtraso] = useState('0');
   const [wallet, setWallet] = useState('');
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Estado para Edición
+  const [idEditando, setIdEditando] = useState<string | null>(null);
+
+  // Estado para Buscador Interactivo
+  const [busqueda, setBusqueda] = useState('');
 
   // Campos Pago
   const [prestamoSeleccionadoId, setPrestamoSeleccionadoId] = useState('');
@@ -83,13 +89,13 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     setCargando(true);
     try {
       const orig = Number(montoOriginal) || 0;
-      const pend = balancePendiente ? Number(balancePendiente) : orig;
+      const pend = balancePendiente !== '' ? Number(balancePendiente) : orig;
 
       const payload = {
         familia_id: familiaId,
         acreedor: acreedor.trim(),
         entidad: acreedor.trim(),
-        tipo, // 'Por Pagar' o 'Por Cobrar'
+        tipo,
         fecha: fecha || new Date().toISOString().split('T')[0],
         monto: pend,
         monto_original: orig,
@@ -102,23 +108,49 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
         estado: pend === 0 ? 'Liquidado' : 'Activo'
       };
 
-      const { error } = await supabase.from('prestamos').insert([payload]);
-
-      if (error) {
-        alert('Error de Supabase al guardar: ' + error.message);
+      if (idEditando) {
+        const { error } = await supabase.from('prestamos').update(payload).eq('id', idEditando);
+        if (error) throw error;
+        alert('¡Préstamo actualizado exitosamente!');
+        setIdEditando(null);
       } else {
+        const { error } = await supabase.from('prestamos').insert([payload]);
+        if (error) throw error;
         alert('¡Préstamo registrado exitosamente!');
-        setAcreedor('');
-        setMontoOriginal('');
-        setBalancePendiente('');
-        setMontoAtraso('0');
-        await cargarPrestamos();
       }
+
+      setAcreedor('');
+      setMontoOriginal('');
+      setBalancePendiente('');
+      setMontoAtraso('0');
+      await cargarPrestamos();
     } catch (err: any) {
-      alert('Error inesperado: ' + err.message);
+      alert('Error de Supabase: ' + err.message);
     } finally {
       setCargando(false);
     }
+  };
+
+  const iniciarEdicion = (item: any) => {
+    setModoFormulario('registrar');
+    setIdEditando(item.id);
+    setAcreedor(item.acreedor || item.entidad || '');
+    setTipo(item.tipo || 'Por Pagar');
+    setMontoOriginal(String(item.monto_original ?? item.monto ?? ''));
+    setBalancePendiente(String(item.balance_pendiente ?? item.monto ?? ''));
+    setCuotasTotales(String(item.cuotas_totales ?? 12));
+    setCuotasPagadas(String(item.cuotas_pagadas ?? 0));
+    setMontoAtraso(String(item.monto_atraso ?? 0));
+    setWallet(item.wallet || '');
+    setFecha(item.fecha || new Date().toISOString().split('T')[0]);
+  };
+
+  const cancelarEdicion = () => {
+    setIdEditando(null);
+    setAcreedor('');
+    setMontoOriginal('');
+    setBalancePendiente('');
+    setMontoAtraso('0');
   };
 
   const handleProcesarPago = async (e: React.FormEvent) => {
@@ -186,17 +218,37 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
     .filter(p => p.tipo === 'Por Pagar' || p.tipo === 'Deuda')
     .reduce((acc, curr) => acc + Number(curr.monto_atraso || 0), 0);
 
+  // Sugerencias autocompletables para el buscador
+  const sugerenciasBusqueda = Array.from(
+    new Set([
+      ...prestamos.map(p => p.acreedor || p.entidad).filter(Boolean),
+      ...prestamos.map(p => p.wallet).filter(Boolean),
+      ...prestamos.map(p => p.tipo).filter(Boolean)
+    ])
+  );
+
+  // Filtrado de préstamos según lo escrito en el buscador
+  const prestamosFiltrados = prestamos.filter(p => {
+    if (!busqueda.trim()) return true;
+    const q = busqueda.toLowerCase();
+    const nombreEntidad = (p.acreedor || p.entidad || '').toLowerCase();
+    const nombreWallet = (p.wallet || '').toLowerCase();
+    const tipoPrestamo = (p.tipo || '').toLowerCase();
+    return nombreEntidad.includes(q) || nombreWallet.includes(q) || tipoPrestamo.includes(q);
+  });
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
       
-      {/* Formulario */}
+      {/* Columna Izquierda: Formulario + Administrador de Wallets */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         
-        <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
+        <div style={{ background: bgCard, border: `1px solid ${idEditando ? '#ffea00' : borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
+          
           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
             <button
               type="button"
-              onClick={() => setModoFormulario('registrar')}
+              onClick={() => { setModoFormulario('registrar'); }}
               style={{
                 flex: 1,
                 padding: '8px',
@@ -206,15 +258,15 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 fontSize: '10px',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
-                background: modoFormulario === 'registrar' ? '#0284c7' : bgInput,
-                color: modoFormulario === 'registrar' ? '#fff' : textLabel
+                background: modoFormulario === 'registrar' ? (esOscuro ? '#00e5ff' : '#0284c7') : bgInput,
+                color: modoFormulario === 'registrar' ? (esOscuro ? '#0a0e14' : '#fff') : textLabel
               }}
             >
-              💳 Registrar Préstamo
+              💳 {idEditando ? 'Editando Préstamo' : 'Registrar Préstamo'}
             </button>
             <button
               type="button"
-              onClick={() => setModoFormulario('pagar')}
+              onClick={() => { setModoFormulario('pagar'); cancelarEdicion(); }}
               style={{
                 flex: 1,
                 padding: '8px',
@@ -224,13 +276,22 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 fontSize: '10px',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
-                background: modoFormulario === 'pagar' ? '#10b981' : bgInput,
-                color: modoFormulario === 'pagar' ? '#fff' : textLabel
+                background: modoFormulario === 'pagar' ? '#00ff41' : bgInput,
+                color: modoFormulario === 'pagar' ? '#0a0e14' : textLabel
               }}
             >
               💵 Pagar Cuota / Abono
             </button>
           </div>
+
+          {idEditando && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '4px 8px', background: 'rgba(255, 234, 0, 0.1)', borderRadius: '6px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#ffea00' }}>✏️ Editando registro actual</span>
+              <button onClick={cancelarEdicion} style={{ background: 'transparent', border: 'none', color: '#ff007f', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px', fontWeight: 'bold' }}>
+                <X size={12} /> Cancelar
+              </button>
+            </div>
+          )}
 
           {modoFormulario === 'registrar' ? (
             <form onSubmit={handleSubmit}>
@@ -238,8 +299,8 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo de Registro</label>
                   <select value={tipo} onChange={e => setTipo(e.target.value as any)} style={inputStyle}>
-                    <option value="Por Pagar">Deuda mía (Por Pagar)</option>
-                    <option value="Por Cobrar">Le presté a alguien (Por Cobrar)</option>
+                    <option value="Por Pagar" style={{ background: bgCard, color: textPrimary }}>Deuda mía (Por Pagar)</option>
+                    <option value="Por Cobrar" style={{ background: bgCard, color: textPrimary }}>Le presté a alguien (Por Cobrar)</option>
                   </select>
                 </div>
                 <div>
@@ -264,7 +325,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Wallet / Cuenta</label>
                   <select value={wallet} onChange={e => setWallet(e.target.value)} style={inputStyle}>
                     {walletsDinamicas.map(w => (
-                      <option key={w.id} value={w.nombre}>{w.nombre} ({w.moneda})</option>
+                      <option key={w.id} value={w.nombre} style={{ background: bgCard, color: textPrimary }}>{w.nombre} ({w.moneda})</option>
                     ))}
                   </select>
                 </div>
@@ -281,7 +342,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto en Atraso (RD$)</label>
-                  <input type="number" step="0.01" value={montoAtraso} onChange={e => setMontoAtraso(e.target.value)} style={{ ...inputStyle, color: Number(montoAtraso) > 0 ? '#ef4444' : textPrimary, fontWeight: 'bold' }} />
+                  <input type="number" step="0.01" value={montoAtraso} onChange={e => setMontoAtraso(e.target.value)} style={{ ...inputStyle, color: Number(montoAtraso) > 0 ? '#ff007f' : textPrimary, fontWeight: 'bold' }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Fecha de Inicio / Registro</label>
@@ -289,8 +350,8 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 </div>
               </div>
 
-              <button type="submit" disabled={cargando} style={{ width: '100%', background: '#0284c7', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
-                {cargando ? 'Guardando...' : 'Registrar Préstamo'}
+              <button type="submit" disabled={cargando} style={{ width: '100%', background: idEditando ? '#ffea00' : (esOscuro ? '#00e5ff' : '#0284c7'), color: idEditando || esOscuro ? '#0a0e14' : '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer', marginTop: '6px' }}>
+                {cargando ? 'Guardando...' : (idEditando ? 'Actualizar Préstamo' : 'Registrar Préstamo')}
               </button>
             </form>
           ) : (
@@ -300,7 +361,7 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                 <select value={prestamoSeleccionadoId} onChange={e => setPrestamoSeleccionadoId(e.target.value)} style={inputStyle}>
                   {prestamos.length === 0 && <option value="">No hay préstamos activos</option>}
                   {prestamos.map(p => (
-                    <option key={p.id} value={p.id}>
+                    <option key={p.id} value={p.id} style={{ background: bgCard, color: textPrimary }}>
                       {p.acreedor || p.entidad} (Pendiente: RD$ {Number(p.balance_pendiente ?? p.monto ?? 0).toLocaleString()})
                     </option>
                   ))}
@@ -316,13 +377,13 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
                   <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Pagar desde esta Wallet</label>
                   <select value={walletPago} onChange={e => setWalletPago(e.target.value)} style={inputStyle}>
                     {walletsDinamicas.map(w => (
-                      <option key={w.id} value={w.nombre}>{w.nombre} ({w.moneda})</option>
+                      <option key={w.id} value={w.nombre} style={{ background: bgCard, color: textPrimary }}>{w.nombre} ({w.moneda})</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              <button type="submit" disabled={cargando || prestamos.length === 0} style={{ width: '100%', background: '#10b981', color: '#fff', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}>
+              <button type="submit" disabled={cargando || prestamos.length === 0} style={{ width: '100%', background: '#00ff41', color: '#0a0e14', padding: '11px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}>
                 {cargando ? 'Procesando...' : 'Confirmar Pago de Cuota'}
               </button>
             </form>
@@ -332,50 +393,88 @@ export const Prestamos: React.FC<PrestamosProps> = ({ familiaId }) => {
         <WalletsManager familiaId={familiaId} onWalletCambio={cargarWallets} />
       </div>
 
-      {/* Historial */}
-      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
+      {/* Columna Derecha: Historial con Buscador y Edición */}
+      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
           <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
             📊 Mis Préstamos y Compromisos
           </span>
           {totalAtrasos > 0 && (
-            <span style={{ fontSize: '10px', background: '#ef444422', color: '#ef4444', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '10px', background: 'rgba(255, 0, 127, 0.15)', color: '#ff007f', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <AlertCircle size={12} /> Atrasos: RD$ {totalAtrasos.toLocaleString()}
             </span>
           )}
         </div>
 
+        {/* Buscador Interactivo con Datalist */}
+        <div style={{ position: 'relative', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '8px', padding: '6px 10px', gap: '8px' }}>
+            <Search size={14} color={textLabel} />
+            <input
+              type="text"
+              list="sugerencias-prestamos"
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar por banco, persona o wallet..."
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: textPrimary,
+                fontSize: '11px',
+                outline: 'none'
+              }}
+            />
+            {busqueda && (
+              <button onClick={() => setBusqueda('')} style={{ background: 'none', border: 'none', color: textLabel, cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                ✕
+              </button>
+            )}
+          </div>
+
+          <datalist id="sugerencias-prestamos">
+            {sugerenciasBusqueda.map((sug, i) => (
+              <option key={i} value={sug} />
+            ))}
+          </datalist>
+        </div>
+
+        {/* Lista de Préstamos Filtrada */}
         <div style={{ maxHeight: '480px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {prestamos.length === 0 ? (
+          {prestamosFiltrados.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '20px', color: textLabel, fontSize: '11px' }}>
-              No tienes préstamos ni deudas registradas.
+              {busqueda ? `Sin resultados para "${busqueda}"` : 'No tienes préstamos ni deudas registradas.'}
             </div>
           ) : (
-            prestamos.map(p => (
-              <div key={p.id} style={{ background: bgInput, border: `1px solid ${p.monto_atraso > 0 ? '#ef444488' : borderCard}`, borderRadius: '10px', padding: '12px' }}>
+            prestamosFiltrados.map(p => (
+              <div key={p.id} style={{ background: bgInput, border: `1px solid ${idEditando === p.id ? '#ffea00' : (p.monto_atraso > 0 ? '#ff007f88' : borderCard)}`, borderRadius: '10px', padding: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <span style={{ fontSize: '12px', fontWeight: '800' }}>
                     {p.tipo === 'Por Pagar' || p.tipo === 'Deuda' ? '🔴' : '🟢'} {p.acreedor || p.entidad} <small style={{ fontWeight: 'normal', color: textLabel }}>({p.wallet})</small>
                   </span>
-                  <span style={{ fontSize: '10px', background: p.estado === 'Liquidado' ? '#10b98122' : borderCard, color: p.estado === 'Liquidado' ? '#10b981' : textLabel, padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                  <span style={{ fontSize: '10px', background: p.estado === 'Liquidado' ? 'rgba(0, 255, 65, 0.15)' : borderCard, color: p.estado === 'Liquidado' ? '#00ff41' : textLabel, padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
                     {p.estado}
                   </span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '8px', fontSize: '10px', color: textLabel, marginBottom: '8px' }}>
                   <div>Original: <b style={{ color: textPrimary }}>RD$ {Number(p.monto_original ?? p.monto ?? 0).toLocaleString()}</b></div>
-                  <div>Pendiente: <b style={{ color: p.tipo === 'Por Pagar' || p.tipo === 'Deuda' ? '#ef4444' : '#10b981' }}>RD$ {Number(p.balance_pendiente ?? p.monto ?? 0).toLocaleString()}</b></div>
+                  <div>Pendiente: <b style={{ color: p.tipo === 'Por Pagar' || p.tipo === 'Deuda' ? '#ff007f' : '#00ff41' }}>RD$ {Number(p.balance_pendiente ?? p.monto ?? 0).toLocaleString()}</b></div>
                   <div>Cuotas: <b>{p.cuotas_pagadas ?? 0} / {p.cuotas_totales ?? 1}</b></div>
                 </div>
 
                 {p.monto_atraso > 0 && (
-                  <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: 'bold', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '10px', color: '#ff007f', fontWeight: 'bold', marginBottom: '8px' }}>
                     ⚠️ En Atraso: RD$ {Number(p.monto_atraso).toLocaleString()}
                   </div>
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                  <button onClick={() => eliminarPrestamo(p.id!)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                  <button onClick={() => iniciarEdicion(p)} title="Editar préstamo" style={{ background: 'transparent', border: 'none', color: '#ffea00', cursor: 'pointer' }}>
+                    <Edit2 size={13} />
+                  </button>
+                  <button onClick={() => eliminarPrestamo(p.id!)} title="Eliminar préstamo" style={{ background: 'transparent', border: 'none', color: '#ff007f', cursor: 'pointer' }}>
                     <Trash2 size={13} />
                   </button>
                 </div>
