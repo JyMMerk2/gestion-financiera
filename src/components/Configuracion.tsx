@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
-import { Copy, Share2, Check, RefreshCw, KeyRound, User, Users, Key, DollarSign, ShieldCheck, AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
+import { Copy, Share2, Check, RefreshCw, KeyRound, User, Users, Key, DollarSign, ShieldCheck, AlertCircle, CheckCircle2, Info, X, LogOut } from 'lucide-react';
 
 interface ConfiguracionProps {
   perfil: any;
@@ -51,6 +51,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
   const [codigoUnirse, setCodigoUnirse] = useState('');
   const [guardandoFamilia, setGuardandoFamilia] = useState(false);
+  const [desvinculando, setDesvinculando] = useState(false);
 
   // Datos Vista Previa Familia
   const [familiaActualNombre, setFamiliaActualNombre] = useState('Sin Grupo Familiar');
@@ -77,6 +78,11 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         setFamiliaActualNombre(nomFam || 'Sin Grupo Familiar');
         setFamiliaActualCodigo(codFam || 'N/A');
         if (perfil.familias.tasa_usd) setTasaUsd(String(perfil.familias.tasa_usd));
+      } else {
+        setFamiliaActualNombre('Sin Grupo Familiar');
+        setFamiliaActualCodigo('N/A');
+        setNombreFamilia('');
+        setCodigoInvitacion('');
       }
     }
   }, [perfil]);
@@ -178,7 +184,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Creación y Vinculación Fluida sin Pestañeos de Recarga
+  // Creación y Vinculación Fluida de Grupo Familiar
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!perfil?.id) return;
@@ -236,13 +242,43 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       mostrarNotificacion('exito', '¡Grupo familiar guardado y vinculado exitosamente!');
       setFamiliaActualNombre(nomFinal);
       setFamiliaActualCodigo(codFinal);
-      
-      // Actualización reactiva instantánea sin recargar la página entera
       await onPerfilActualizado();
     } catch (err: any) {
       mostrarNotificacion('error', 'Detalle al guardar grupo: ' + err.message);
     } finally {
       setGuardandoFamilia(false);
+    }
+  };
+
+  // Función para Desvincularse de la Familia Actual
+  const handleSalirFamilia = async () => {
+    if (!perfil?.familia_id && !perfil?.familias?.id) {
+      mostrarNotificacion('info', 'No perteneces a ningún grupo familiar actualmente.');
+      return;
+    }
+
+    const confirmar = window.confirm('¿Estás seguro de que deseas desvincularte de este grupo familiar? Tus datos personales seguirán guardados independientemente.');
+    if (!confirmar) return;
+
+    setDesvinculando(true);
+    try {
+      const { error } = await supabase
+        .from('perfiles')
+        .update({ familia_id: null })
+        .eq('id', perfil.id);
+
+      if (error) throw error;
+
+      mostrarNotificacion('exito', 'Te has desvinculado del grupo familiar correctamente.');
+      setFamiliaActualNombre('Sin Grupo Familiar');
+      setFamiliaActualCodigo('N/A');
+      setNombreFamilia('');
+      setCodigoInvitacion('');
+      await onPerfilActualizado();
+    } catch (err: any) {
+      mostrarNotificacion('error', 'Error al desvincularse: ' + err.message);
+    } finally {
+      setDesvinculando(false);
     }
   };
 
@@ -329,10 +365,12 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     setTimeout(() => setCopiadoApp(false), 2000);
   };
 
+  const tieneFamilia = Boolean(perfil?.familia_id || perfil?.familias?.id);
+
   return (
     <div style={{ background: bgCard, padding: '24px', borderRadius: '16px', border: `1px solid ${borderCard}`, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
       
-      {/* COMPONENTE DE NOTIFICACIONES ELEGANTES */}
+      {/* NOTIFICACIONES TOAST CYBERPUNK */}
       <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '360px' }}>
         {toasts.map(t => {
           const esExito = t.tipo === 'exito';
@@ -451,16 +489,28 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
         <div style={{ background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '10px', padding: '12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ fontSize: '10px', fontWeight: 'bold', color: textLabel, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ShieldCheck size={13} color="#00ff41" /> Estado Actual del Grupo
+            <ShieldCheck size={13} color={tieneFamilia ? '#00ff41' : '#ffea00'} /> Estado Actual del Grupo
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
             <span style={{ color: textLabel }}>Nombre Actual:</span>
-            <b style={{ color: '#00e5ff' }}>{familiaActualNombre}</b>
+            <b style={{ color: tieneFamilia ? '#00e5ff' : textLabel }}>{familiaActualNombre}</b>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
             <span style={{ color: textLabel }}>Código Vincular:</span>
-            <b style={{ color: '#ffea00', letterSpacing: '1px' }}>{familiaActualCodigo}</b>
+            <b style={{ color: tieneFamilia ? '#ffea00' : textLabel, letterSpacing: '1px' }}>{familiaActualCodigo}</b>
           </div>
+
+          {/* Botón para Desvincularse de la Familia */}
+          {tieneFamilia && (
+            <button
+              type="button"
+              onClick={handleSalirFamilia}
+              disabled={desvinculando}
+              style={{ marginTop: '6px', background: 'rgba(255, 0, 127, 0.12)', border: '1px solid #ff007f', color: '#ff007f', borderRadius: '6px', padding: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+            >
+              <LogOut size={12} /> {desvinculando ? 'Desvinculando...' : 'Desvincularse del Grupo Familiar'}
+            </button>
+          )}
         </div>
 
         <div style={{ marginBottom: '14px' }}>
@@ -536,7 +586,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
       {/* Pie de Página */}
       <div style={{ textAlign: 'center', paddingTop: '4px' }}>
-        <span style={{ fontSize: '10px', fontWeight: '800', color: textLabel, letterSpacing: '0.05em' }}>
+        <span style={{ fontSize: '10px', fontWeight: '800', color textLabel, letterSpacing: '0.05em' }}>
           Gestión Financiera App • <span style={{ color: '#00e5ff' }}>{APP_VERSION}</span>
         </span>
       </div>
