@@ -56,16 +56,20 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ mesSeleccionado: mesPr
     return `${nombres[parseInt(month, 10) - 1]} ${year}`;
   };
 
-  // Carga de Wallets Privadas del Usuario
+  // Carga de Wallets Privadas/Familiares
   const cargarWallets = useCallback(async () => {
     const userId = perfil?.id || (await supabase.auth.getUser()).data.user?.id;
-    if (!userId) return;
+    const famId = perfil?.familia_id || perfil?.familias?.id;
+    if (!userId && !famId) return;
 
-    const { data } = await supabase
-      .from('wallets')
-      .select('id, nombre, moneda')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
+    let query = supabase.from('wallets').select('id, nombre, moneda');
+    if (famId) {
+      query = query.or(`user_id.eq.${userId},familia_id.eq.${famId}`);
+    } else {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data } = await query.order('created_at', { ascending: true });
 
     if (data && data.length > 0) {
       setWalletsDinamicas(data);
@@ -75,16 +79,23 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ mesSeleccionado: mesPr
     }
   }, [perfil]);
 
-  // Carga de Transacciones Privadas por usuario (user_id)
+  // Carga Híbrida de Transacciones (user_id o familia_id)
   const cargarTransacciones = useCallback(async () => {
-    const userId = perfil?.id || (await supabase.auth.getUser()).data.user?.id;
-    if (!userId) return;
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return;
 
-    const { data } = await supabase
-      .from('presupuesto')
-      .select('*')
-      .eq('user_id', userId)
-      .order('fecha', { ascending: false });
+    const userId = perfil?.id || user.id;
+    const famId = perfil?.familia_id || perfil?.familias?.id;
+
+    let query = supabase.from('presupuesto').select('*');
+
+    if (famId) {
+      query = query.or(`user_id.eq.${userId},familia_id.eq.${famId}`);
+    } else {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data } = await query.order('fecha', { ascending: false });
 
     if (data) {
       setTransacciones(data.filter((row: TransaccionPresupuesto) => row.fecha.startsWith(mesActual)));
@@ -105,8 +116,11 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ mesSeleccionado: mesPr
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('Usuario no autenticado.');
 
+      const famId = perfil?.familia_id || perfil?.familias?.id;
+
       await supabase.from('presupuesto').insert([{
         user_id: user.id,
+        familia_id: famId || null,
         fecha,
         tipo,
         categoria: categoria || 'General',
@@ -165,7 +179,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ mesSeleccionado: mesPr
         {/* Formulario de Registro */}
         <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
           <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-            ✍️ Registrar Ingreso o Gasto (Privado)
+            ✍️ Registrar Ingreso o Gasto
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -225,8 +239,8 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ mesSeleccionado: mesPr
           </form>
         </div>
 
-        {/* Wallets Privadas */}
-        <WalletsManager familiaId={perfil?.id} onWalletCambio={cargarWallets} />
+        {/* Wallets */}
+        <WalletsManager familiaId={perfil?.familia_id || perfil?.id} onWalletCambio={cargarWallets} />
 
       </div>
 
@@ -235,7 +249,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ mesSeleccionado: mesPr
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
           <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
-            📜 Historial Personal
+            📜 Historial de Presupuesto
           </span>
 
           <div style={{ display: 'flex', alignItems: 'center', background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '20px', padding: '3px 10px', gap: '8px' }}>
