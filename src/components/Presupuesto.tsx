@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase';
 import { TransaccionPresupuesto, TipoTransaccion } from '../types';
 import { useModoOscuro } from '../hooks/useModoOscuro';
@@ -6,8 +6,9 @@ import { WalletsManager } from './WalletsManager';
 import { ChevronLeft, ChevronRight, Calendar, Trash2, Search } from 'lucide-react';
 
 interface PresupuestoProps {
-  familiaId: string;
+  familiaId?: string;
   mesSeleccionado: string;
+  perfil?: any;
 }
 
 interface WalletItem {
@@ -16,7 +17,7 @@ interface WalletItem {
   moneda: string;
 }
 
-export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccionado: mesProp }) => {
+export const Presupuesto: React.FC<PresupuestoProps> = ({ mesSeleccionado: mesProp, perfil }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
 
   // Estado local para permitir la navegación dinámica entre meses
@@ -55,12 +56,15 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
     return `${nombres[parseInt(month, 10) - 1]} ${year}`;
   };
 
-  const cargarWallets = async () => {
-    if (!familiaId) return;
+  // Carga de Wallets Privadas del Usuario
+  const cargarWallets = useCallback(async () => {
+    const userId = perfil?.id || (await supabase.auth.getUser()).data.user?.id;
+    if (!userId) return;
+
     const { data } = await supabase
       .from('wallets')
       .select('id, nombre, moneda')
-      .eq('familia_id', familiaId)
+      .eq('user_id', userId)
       .order('created_at', { ascending: true });
 
     if (data && data.length > 0) {
@@ -69,25 +73,28 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
     } else {
       setWalletsDinamicas([]);
     }
-  };
+  }, [perfil]);
 
-  const cargarTransacciones = async () => {
-    if (!familiaId) return;
+  // Carga de Transacciones Privadas por usuario (user_id)
+  const cargarTransacciones = useCallback(async () => {
+    const userId = perfil?.id || (await supabase.auth.getUser()).data.user?.id;
+    if (!userId) return;
+
     const { data } = await supabase
       .from('presupuesto')
       .select('*')
-      .eq('familia_id', familiaId)
+      .eq('user_id', userId)
       .order('fecha', { ascending: false });
 
     if (data) {
       setTransacciones(data.filter((row: TransaccionPresupuesto) => row.fecha.startsWith(mesActual)));
     }
-  };
+  }, [mesActual, perfil]);
 
   useEffect(() => {
     cargarTransacciones();
     cargarWallets();
-  }, [familiaId, mesActual]);
+  }, [cargarTransacciones, cargarWallets]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,8 +102,11 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
 
     setCargando(true);
     try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Usuario no autenticado.');
+
       await supabase.from('presupuesto').insert([{
-        familia_id: familiaId,
+        user_id: user.id,
         fecha,
         tipo,
         categoria: categoria || 'General',
@@ -125,7 +135,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
     cargarTransacciones();
   };
 
-  // Generar sugerencias únicas para el buscador
+  // Sugerencias para el buscador
   const sugerenciasBusqueda = Array.from(
     new Set([
       ...transacciones.map(t => t.categoria).filter(Boolean),
@@ -134,7 +144,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
     ])
   );
 
-  // Filtrado de transacciones según lo ingresado en la búsqueda
+  // Filtrado dinámico
   const transaccionesFiltradas = transacciones.filter(t => {
     if (!busqueda.trim()) return true;
     const q = busqueda.toLowerCase();
@@ -149,13 +159,13 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
       
-      {/* Columna Izquierda: Formulario + Administrador de Wallets */}
+      {/* Columna Izquierda: Formulario + Wallets Privadas */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         
         {/* Formulario de Registro */}
         <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
           <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-            ✍️ Registrar Ingreso o Gasto
+            ✍️ Registrar Ingreso o Gasto (Privado)
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -215,20 +225,19 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
           </form>
         </div>
 
-        {/* Administrador Dinámico de Wallets y Cuentas Bancarias */}
-        <WalletsManager familiaId={familiaId} onWalletCambio={cargarWallets} />
+        {/* Wallets Privadas */}
+        <WalletsManager familiaId={perfil?.id} onWalletCambio={cargarWallets} />
 
       </div>
 
-      {/* Columna Derecha: Historial con Selector de Mes y Buscador */}
+      {/* Columna Derecha: Historial con Buscador */}
       <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
           <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
-            📜 Historial Presupuesto
+            📜 Historial Personal
           </span>
 
-          {/* Selector de Mes Navegable */}
           <div style={{ display: 'flex', alignItems: 'center', background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '20px', padding: '3px 10px', gap: '8px' }}>
             <button onClick={() => cambiarMes(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textPrimary, display: 'flex', alignItems: 'center' }}>
               <ChevronLeft size={14} />
@@ -242,7 +251,6 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
           </div>
         </div>
 
-        {/* Buscador de Transacciones con Sugerencias */}
         <div style={{ position: 'relative', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '8px', padding: '6px 10px', gap: '8px' }}>
             <Search size={14} color={textLabel} />
@@ -252,30 +260,17 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
               value={busqueda}
               onChange={e => setBusqueda(e.target.value)}
               placeholder="Buscar por concepto, categoría o wallet..."
-              style={{
-                width: '100%',
-                background: 'transparent',
-                border: 'none',
-                color: textPrimary,
-                fontSize: '11px',
-                outline: 'none'
-              }}
+              style={{ width: '100%', background: 'transparent', border: 'none', color: textPrimary, fontSize: '11px', outline: 'none' }}
             />
             {busqueda && (
-              <button onClick={() => setBusqueda('')} style={{ background: 'none', border: 'none', color: textLabel, cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
-                ✕
-              </button>
+              <button onClick={() => setBusqueda('')} style={{ background: 'none', border: 'none', color: textLabel, cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>✕</button>
             )}
           </div>
-
           <datalist id="sugerencias-presupuesto">
-            {sugerenciasBusqueda.map((sug, i) => (
-              <option key={i} value={sug} />
-            ))}
+            {sugerenciasBusqueda.map((sug, i) => <option key={i} value={sug} />)}
           </datalist>
         </div>
 
-        {/* Tabla del Historial Filtrada */}
         <div style={{ maxHeight: '480px', overflowY: 'auto' }}>
           {transaccionesFiltradas.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '20px', color: textLabel, fontSize: '11px' }}>
