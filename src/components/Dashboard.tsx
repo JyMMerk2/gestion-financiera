@@ -32,12 +32,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
   // Estructura de 12 meses registrando Ingresos y Gastos de forma independiente
   const [historial12Meses, setHistorial12Meses] = useState<{ mes: string; label: string; ingresos: number; gastos: number }[]>([]);
 
-  // Estilos
-  const cardBg = modoOscuro ? '#1e293b' : '#ffffff';
-  const cardBorder = modoOscuro ? '#334155' : '#e5e7eb';
-  const innerBg = modoOscuro ? '#0f172a' : '#f9fafb';
+  // Estilos adaptados al estilo Dark Neón
+  const cardBg = modoOscuro ? '#11161d' : '#ffffff';
+  const cardBorder = modoOscuro ? '#1f2937' : '#e5e7eb';
+  const innerBg = modoOscuro ? '#0a0e14' : '#f9fafb';
   const textPrimary = modoOscuro ? '#f8fafc' : '#111827';
-  const textSecondary = modoOscuro ? '#cbd5e1' : '#6b7280';
+  const textSecondary = modoOscuro ? '#94a3b8' : '#6b7280';
 
   const cambiarMes = (delta: number) => {
     const [year, month] = mesSeleccionado.split('-').map(Number);
@@ -197,7 +197,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
               borderRadius: '12px', 
               border: `1px solid ${cardBorder}`, 
               background: cardBg, 
-              color: textPrimary,
+              color: modoOscuro ? '#00e5ff' : textPrimary,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -214,8 +214,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
               height: '42px', 
               borderRadius: '12px', 
               border: 'none', 
-              background: 'rgba(239, 68, 68, 0.12)', 
-              color: '#ef4444', 
+              background: 'rgba(255, 0, 127, 0.15)', 
+              color: '#ff007f', 
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -228,11 +228,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
         </div>
 
         <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: '900', margin: 0, color: textPrimary }}>
+          <h1 style={{ fontSize: '22px', fontWeight: '900', margin: 0, color: textPrimary, letterSpacing: '0.05em' }}>
             Hola, {perfil?.nombre_usuario?.toUpperCase() || perfil?.nombre?.toUpperCase() || perfil?.email?.split('@')[0]?.toUpperCase() || 'USUARIO'}
           </h1>
           <p style={{ fontSize: '11px', color: textSecondary, margin: '2px 0 0 0', fontWeight: '600' }}>
-            {perfil?.familias?.nombre || 'Familia'} • Código: <b style={{ color: '#38bdf8' }}>{perfil?.familias?.codigo_invitacion || 'N/A'}</b>
+            {perfil?.familias?.nombre || 'Familia'} • Código: <b style={{ color: '#00e5ff' }}>{perfil?.familias?.codigo_invitacion || 'N/A'}</b>
           </p>
         </div>
 
@@ -249,7 +249,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
           <button onClick={() => cambiarMes(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textPrimary, display: 'flex', alignItems: 'center' }}>
             <ChevronLeft size={16} />
           </button>
-          <span style={{ fontSize: '12px', fontWeight: '800', minWidth: '80px', textAlign: 'center' }}>{obtenerNombreMes(mesSeleccionado)}</span>
+          <span style={{ fontSize: '12px', fontWeight: '800', minWidth: '80px', textAlign: 'center', color: modoOscuro ? '#00e5ff' : textPrimary }}>{obtenerNombreMes(mesSeleccionado)}</span>
           <button onClick={() => cambiarMes(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textPrimary, display: 'flex', alignItems: 'center' }}>
             <ChevronRight size={16} />
           </button>
@@ -260,33 +260,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
         <div>
           <div style={{ fontSize: '10px', fontWeight: '800', color: textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-            <TrendingUp size={14} color="#10b981" /> INGRESOS
+            <TrendingUp size={14} color="#00ff41" /> INGRESOS
           </div>
-          <div style={{ fontSize: '22px', fontWeight: '900', color: '#10b981', ...blurStyle }}>
+          <div style={{ fontSize: '22px', fontWeight: '900', color: '#00ff41', ...blurStyle }}>
             RD$ {ingresosMes.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div>
           <div style={{ fontSize: '10px', fontWeight: '800', color: textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-            <TrendingDown size={14} color="#ef4444" /> GASTOS
+            <TrendingDown size={14} color="#ff007f" /> GASTOS
           </div>
-          <div style={{ fontSize: '22px', fontWeight: '900', color: '#ef4444', ...blurStyle }}>
+          <div style={{ fontSize: '22px', fontWeight: '900', color: '#ff007f', ...blurStyle }}>
             RD$ {gastosMes.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         <div>
           <div style={{ fontSize: '10px', fontWeight: '800', color: textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-            <Coins size={14} color="#0284c7" /> AHORRO NETO
+            <Coins size={14} color="#00e5ff" /> AHORRO NETO
           </div>
-          <div style={{ fontSize: '22px', fontWeight: '900', color: textPrimary, ...blurStyle }}>
+          <div style={{ fontSize: '22px', fontWeight: '900', color: modoOscuro ? '#00e5ff' : textPrimary, ...blurStyle }}>
             RD$ {ahorroMes.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
       </div>
 
-      {/* Bloque 2: Gráfica de Doble Barra (Ingresos vs. Gastos) por Mes */}
+      {/* Bloque 2: Gráfica de Doble Barra Interactiva (Hacer Clic Selecciona el Mes) */}
       <div style={{ background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
-        <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: textPrimary }}>
+        <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '16px', color: modoOscuro ? '#00e5ff' : textPrimary, letterSpacing: '0.05em' }}>
           Flujo de dinero (Ingresos vs. Gastos) — últimos 12 meses
         </div>
 
@@ -294,36 +294,56 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
           {historial12Meses.map((m, idx) => {
             const hIngreso = m.ingresos > 0 ? Math.max(8, Math.min(65, Math.round((m.ingresos / maxMontoGlobal) * 65))) : 4;
             const hGasto = m.gastos > 0 ? Math.max(8, Math.min(65, Math.round((m.gastos / maxMontoGlobal) * 65))) : 4;
+            const esActivo = m.mes === mesSeleccionado;
 
             return (
-              <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+              <div 
+                key={idx} 
+                onClick={() => setMesSeleccionado(m.mes)}
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  height: '100%', 
+                  justifyContent: 'flex-end',
+                  cursor: 'pointer',
+                  padding: '4px 2px',
+                  borderRadius: '6px',
+                  background: esActivo ? (modoOscuro ? 'rgba(0, 229, 255, 0.15)' : 'rgba(15, 23, 42, 0.05)') : 'transparent',
+                  border: esActivo && modoOscuro ? '1px solid #00e5ff55' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+                title={`Hacer clic para filtrar por ${m.label}`}
+              >
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', width: '100%', justifyContent: 'center' }}>
-                  {/* Barra Verde - Ingresos / Entradas */}
+                  {/* Barra Verde Neón - Ingresos */}
                   <div 
                     style={{
                       flex: 1,
                       maxWidth: '10px',
                       height: `${hIngreso}px`,
                       borderRadius: '3px 3px 0 0',
-                      background: m.ingresos > 0 ? '#10b981' : (modoOscuro ? '#334155' : '#e2e8f0'),
+                      background: m.ingresos > 0 ? '#00ff41' : (modoOscuro ? '#1f2937' : '#e2e8f0'),
+                      boxShadow: m.ingresos > 0 && modoOscuro ? '0 0 8px rgba(0, 255, 65, 0.4)' : 'none',
                       transition: 'all 0.3s ease'
                     }}
                     title={`${m.label} Ingresos: RD$ ${m.ingresos.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                   />
-                  {/* Barra Roja - Gastos / Salidas */}
+                  {/* Barra Magenta Neón - Gastos */}
                   <div 
                     style={{
                       flex: 1,
                       maxWidth: '10px',
                       height: `${hGasto}px`,
                       borderRadius: '3px 3px 0 0',
-                      background: m.gastos > 0 ? '#ef4444' : (modoOscuro ? '#334155' : '#e2e8f0'),
+                      background: m.gastos > 0 ? '#ff007f' : (modoOscuro ? '#1f2937' : '#e2e8f0'),
+                      boxShadow: m.gastos > 0 && modoOscuro ? '0 0 8px rgba(255, 0, 127, 0.4)' : 'none',
                       transition: 'all 0.3s ease'
                     }}
                     title={`${m.label} Gastos: RD$ ${m.gastos.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                   />
                 </div>
-                <span style={{ fontSize: '9px', fontWeight: m.mes === mesSeleccionado ? 'bold' : 'normal', color: m.mes === mesSeleccionado ? textPrimary : textSecondary, marginTop: '8px' }}>
+                <span style={{ fontSize: '9px', fontWeight: esActivo ? 'bold' : 'normal', color: esActivo ? '#00e5ff' : textSecondary, marginTop: '8px' }}>
                   {m.label}
                 </span>
               </div>
@@ -332,18 +352,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
         </div>
 
         <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '10px', fontWeight: 'bold' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
-            <span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '2px' }}></span> Ingresos / Entradas
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#00ff41' }}>
+            <span style={{ width: '8px', height: '8px', background: '#00ff41', borderRadius: '2px' }}></span> Ingresos / Entradas
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444' }}>
-            <span style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '2px' }}></span> Gastos / Salidas
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ff007f' }}>
+            <span style={{ width: '8px', height: '8px', background: '#ff007f', borderRadius: '2px' }}></span> Gastos / Salidas
           </span>
         </div>
       </div>
 
       {/* Bloque 3: Últimas Transacciones del Mes */}
       <div style={{ background: cardBg, borderRadius: '18px', padding: '20px', border: `1px solid ${cardBorder}`, marginBottom: '20px' }}>
-        <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '12px', color: textPrimary }}>Últimas transacciones del mes</div>
+        <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '12px', color: textPrimary }}>
+          Últimas transacciones del mes ({obtenerNombreMes(mesSeleccionado)})
+        </div>
         {ultimasTransacciones.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px', color: textSecondary, fontSize: '13px', fontWeight: '700' }}>
             📉 Sin movimientos en este mes
@@ -356,7 +378,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
                   <div style={{ fontSize: '11px', fontWeight: '800', color: textPrimary }}>{t.concepto || t.categoria}</div>
                   <div style={{ fontSize: '9px', color: textSecondary }}>{t.fecha} • {t.wallet}</div>
                 </div>
-                <div style={{ fontSize: '12px', fontWeight: '900', color: t.tipo === 'Ingreso' ? '#10b981' : '#ef4444', ...blurStyle }}>
+                <div style={{ fontSize: '12px', fontWeight: '900', color: t.tipo === 'Ingreso' ? '#00ff41' : '#ff007f', ...blurStyle }}>
                   {t.tipo === 'Ingreso' ? '+' : '-'} RD$ {Number(t.monto_dop).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
@@ -367,25 +389,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
 
       {/* Bloque 4: Indicadores Generales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px' }}>
-        <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #ef4444' }}>
+        <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #ff007f' }}>
           <div style={{ fontSize: '9px', fontWeight: '800', color: textSecondary, display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <CreditCard size={12} color="#ef4444" /> DEUDAS PENDIENTES
+            <CreditCard size={12} color="#ff007f" /> DEUDAS PENDIENTES
           </div>
           <div style={{ fontSize: '16px', fontWeight: '800', color: textPrimary, marginTop: '4px', ...blurStyle }}>
             RD$ {deudasTotales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
-        <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #6366f1' }}>
+        <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #00e5ff' }}>
           <div style={{ fontSize: '9px', fontWeight: '800', color: textSecondary, display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Building2 size={12} color="#6366f1" /> PATRIMONIO NETO
+            <Building2 size={12} color="#00e5ff" /> PATRIMONIO NETO
           </div>
           <div style={{ fontSize: '16px', fontWeight: '800', color: textPrimary, marginTop: '4px', ...blurStyle }}>
             RD$ {patrimonioNeto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
-        <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #10b981' }}>
+        <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '14px', borderLeft: '4px solid #00ff41' }}>
           <div style={{ fontSize: '9px', fontWeight: '800', color: textSecondary, display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Landmark size={12} color="#10b981" /> DISPONIBLE REAL
+            <Landmark size={12} color="#00ff41" /> DISPONIBLE REAL
           </div>
           <div style={{ fontSize: '16px', fontWeight: '800', color: textPrimary, marginTop: '4px', ...blurStyle }}>
             RD$ {disponibleReal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -394,7 +416,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
       </div>
 
       {/* Bloque 5: Balance por Cuentas / Wallets */}
-      <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '10px', color: textPrimary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '10px', color: modoOscuro ? '#00e5ff' : textPrimary, display: 'flex', alignItems: 'center', gap: '6px' }}>
         <Wallet size={14} /> BALANCE POR CUENTAS / WALLETS
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
@@ -404,7 +426,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ perfil, onLogout, modoOscu
           </div>
         ) : (
           Object.keys(walletsBalances).map((wKey) => (
-            <div key={wKey} style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '12px', padding: '12px', borderTop: `4px solid ${modoOscuro ? '#38bdf8' : '#111827'}` }}>
+            <div key={wKey} style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '12px', padding: '12px', borderTop: `4px solid ${modoOscuro ? '#00e5ff' : '#111827'}` }}>
               <div style={{ fontSize: '10px', fontWeight: '700', color: textSecondary }}>{wKey}</div>
               <div style={{ fontSize: '13px', fontWeight: '800', color: textPrimary, marginTop: '2px', ...blurStyle }}>
                 RD$ {walletsBalances[wKey].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
