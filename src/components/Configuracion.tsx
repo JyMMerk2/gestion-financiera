@@ -169,7 +169,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Guardado de la Familia con Vinculación Directa en Perfil
+  // Guardado de la Familia con detección de RLS y Vinculación directa
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuardandoFamilia(true);
@@ -180,29 +180,46 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       const codFinal = codigoInvitacion.trim().toUpperCase() || 'FAMILIA-2026';
 
       if (!familiaId) {
-        // 1. Crear nuevo registro en la tabla 'familias'
-        const { data: nuevaFam, error: errCrear } = await supabase
+        // 1. Intentar buscar si ya existe una familia con ese código de invitación
+        const { data: famExistente } = await supabase
           .from('familias')
-          .insert([{
-            nombre: nomFinal,
-            codigo_invitacion: codFinal,
-            tasa_usd: Number(tasaUsd) || 60.00
-          }])
-          .select()
-          .single();
+          .select('id')
+          .eq('codigo_invitacion', codFinal)
+          .maybeSingle();
 
-        if (errCrear) throw errCrear;
-        familiaId = nuevaFam.id;
+        if (famExistente) {
+          familiaId = famExistente.id;
+          // Actualizamos nombre si ya existe
+          await supabase
+            .from('familias')
+            .update({ nombre: nomFinal })
+            .eq('id', familiaId);
+        } else {
+          // 2. Crear un nuevo registro en 'familias'
+          const { data: nuevaFam, error: errCrear } = await supabase
+            .from('familias')
+            .insert([{
+              nombre: nomFinal,
+              codigo_invitacion: codFinal,
+              tasa_usd: Number(tasaUsd) || 60.00
+            }])
+            .select()
+            .single();
 
-        // 2. Vincular el id de la nueva familia en el perfil del usuario
+          if (errCrear) throw errCrear;
+          familiaId = nuevaFam.id;
+        }
+
+        // 3. Vincular obligatoriamente en la tabla perfiles
         const { error: errPerfil } = await supabase
           .from('perfiles')
           .update({ familia_id: familiaId })
           .eq('id', perfil.id);
 
         if (errPerfil) throw errPerfil;
+
       } else {
-        // 3. Actualizar la familia existente
+        // 4. Si ya estaba vinculado, simplemente se actualiza el registro en la tabla 'familias'
         const { error: errUpdate } = await supabase
           .from('familias')
           .update({
@@ -212,25 +229,19 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           .eq('id', familiaId);
 
         if (errUpdate) throw errUpdate;
-
-        // Asegurar que la relación esté activa
-        await supabase
-          .from('perfiles')
-          .update({ familia_id: familiaId })
-          .eq('id', perfil.id);
       }
 
       alert('¡Grupo familiar guardado y vinculado correctamente!');
       await onPerfilActualizado();
       window.location.reload();
     } catch (err: any) {
-      alert('Error al guardar la familia: ' + err.message);
+      alert('Error al guardar el grupo familiar: ' + err.message);
     } finally {
       setGuardandoFamilia(false);
     }
   };
 
-  // Guardado independiente de las Tasas de Cambio
+  // Guardado independiente de las Tasas
   const handleGuardarTasas = async (e: React.FormEvent) => {
     e.preventDefault();
     const familiaId = perfil?.familia_id || perfil?.familias?.id;
@@ -477,7 +488,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
             required
             value={nombreFamilia}
             onChange={(e) => setNombreFamilia(e.target.value)}
-            placeholder="Ej. Familia JYMMERK2"
+            placeholder="Ej. FAMILIA MERCADO GARCIA"
             style={inputStyle}
           />
         </div>
