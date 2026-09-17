@@ -169,7 +169,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Guardado Garantizado con Búsqueda por Código Único
+  // Guardado de la Familia con trazabilidad en consola
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuardandoFamilia(true);
@@ -179,8 +179,10 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       const nomFinal = nombreFamilia.trim() || 'Mi Grupo Familiar';
       const codFinal = codigoInvitacion.trim().toUpperCase() || 'FAMILIA-2026';
 
+      console.log('Iniciando guardado de familia...', { familiaId, nomFinal, codFinal });
+
       if (!familiaId) {
-        // 1. Verificar si ya existe esa familia registrada
+        // 1. Verificar si existe esa familia registrada
         const { data: famExistente } = await supabase
           .from('familias')
           .select('id')
@@ -190,7 +192,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         if (famExistente) {
           familiaId = famExistente.id;
         } else {
-          // 2. Insertar sin forzar retorno inmediato
+          // 2. Insertar familia
           const { error: errInsert } = await supabase
             .from('familias')
             .insert([{
@@ -199,28 +201,41 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
               tasa_usd: Number(tasaUsd) || 60.00
             }]);
 
-          if (errInsert) throw errInsert;
+          if (errInsert) {
+            console.error('Error insertando en familias:', errInsert);
+            throw errInsert;
+          }
 
-          // 3. Consultar el ID recién creado
+          // 3. Consultar ID recién creado
           const { data: nuevaFam, error: errFetch } = await supabase
             .from('familias')
             .select('id')
             .eq('codigo_invitacion', codFinal)
             .single();
 
-          if (errFetch || !nuevaFam) throw new Error('No se pudo recuperar el ID de la familia creada.');
+          if (errFetch || !nuevaFam) {
+            console.error('Error consultando familia creada:', errFetch);
+            throw new Error('No se pudo verificar el registro de la familia.');
+          }
+
           familiaId = nuevaFam.id;
         }
 
-        // 4. Actualizar el perfil con el id de la familia creada
+        console.log('Vinculando familia_id a perfiles:', familiaId);
+
+        // 4. Vincular en la tabla perfiles
         const { error: errPerfil } = await supabase
           .from('perfiles')
           .update({ familia_id: familiaId })
           .eq('id', perfil.id);
 
-        if (errPerfil) throw errPerfil;
+        if (errPerfil) {
+          console.error('Error vinculando perfil:', errPerfil);
+          throw errPerfil;
+        }
+
       } else {
-        // 5. Actualización directa si ya tiene una familia vinculada
+        // 5. Actualizar la familia existente
         const { error: errUpdate } = await supabase
           .from('familias')
           .update({
@@ -229,13 +244,17 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           })
           .eq('id', familiaId);
 
-        if (errUpdate) throw errUpdate;
+        if (errUpdate) {
+          console.error('Error actualizando familias:', errUpdate);
+          throw errUpdate;
+        }
       }
 
       alert('¡Grupo familiar guardado y vinculado correctamente!');
       await onPerfilActualizado();
       window.location.reload();
     } catch (err: any) {
+      console.error('Error general handleGuardarFamilia:', err);
       alert('Error al guardar el grupo familiar: ' + err.message);
     } finally {
       setGuardandoFamilia(false);
