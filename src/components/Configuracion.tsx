@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
-import { Copy, Share2, Check, RefreshCw, KeyRound, User, Users, Key } from 'lucide-react';
+import { Copy, Share2, Check, RefreshCw, KeyRound, User, Users, Key, DollarSign } from 'lucide-react';
 
 interface ConfiguracionProps {
   perfil: any;
@@ -26,14 +26,18 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   const [confirmarPassword, setConfirmarPassword] = useState('');
   const [guardandoPassword, setGuardandoPassword] = useState(false);
 
-  // Estados de Familia y Tasas
+  // Estados de Familia
   const [nombreFamilia, setNombreFamilia] = useState('');
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
   const [codigoUnirse, setCodigoUnirse] = useState('');
+  const [guardandoFamilia, setGuardandoFamilia] = useState(false);
+
+  // Estados de Tasas
   const [tasaUsd, setTasaUsd] = useState('60.00');
   const [tasaEur, setTasaEur] = useState('65.00');
   const [estadoTasa, setEstadoTasa] = useState('Cargando...');
-  const [guardando, setGuardando] = useState(false);
+  const [guardandoTasas, setGuardandoTasas] = useState(false);
+
   const [copiado, setCopiado] = useState(false);
   const [copiadoApp, setCopiadoApp] = useState(false);
 
@@ -84,7 +88,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardandoUsuario(true);
     try {
-      // Actualización exclusiva de la columna 'nombre_usuario' para evitar conflictos con el esquema
       const { error } = await supabase
         .from('perfiles')
         .update({
@@ -125,7 +128,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     setGuardandoPassword(true);
     try {
-      // Validar primero la contraseña actual volviendo a autenticar al usuario
       const userEmail = perfil?.email;
       if (!userEmail) throw new Error('No se pudo verificar el correo electrónico del usuario.');
 
@@ -140,7 +142,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         return;
       }
 
-      // Si la contraseña actual es correcta, actualizar a la nueva contraseña
       const { error: updateError } = await supabase.auth.updateUser({
         password: nuevaPassword
       });
@@ -160,6 +161,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
+  // Guardado independiente del Grupo Familiar
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     const familiaId = perfil?.familia_id || perfil?.familias?.id;
@@ -168,28 +170,57 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       return;
     }
 
-    setGuardando(true);
+    setGuardandoFamilia(true);
     try {
-      // Se envían únicamente los campos existentes en el esquema de 'familias'
       const { error } = await supabase
         .from('familias')
         .update({
           nombre: nombreFamilia.trim(),
-          codigo_invitacion: codigoInvitacion.trim().toUpperCase(),
-          tasa_usd: Number(tasaUsd) || 60.00
+          codigo_invitacion: codigoInvitacion.trim().toUpperCase()
         })
         .eq('id', familiaId);
 
       if (error) {
         alert('Error al actualizar la familia: ' + error.message);
       } else {
-        alert('¡Configuración de familia y tasas actualizada correctamente!');
+        alert('¡Datos de la familia actualizados con éxito!');
         await onPerfilActualizado();
       }
     } catch (err: any) {
       alert('Error inesperado: ' + err.message);
     } finally {
-      setGuardando(false);
+      setGuardandoFamilia(false);
+    }
+  };
+
+  // Guardado independiente de las Tasas de Cambio
+  const handleGuardarTasas = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const familiaId = perfil?.familia_id || perfil?.familias?.id;
+    if (!familiaId) {
+      alert('No tienes un ID de familia asignado.');
+      return;
+    }
+
+    setGuardandoTasas(true);
+    try {
+      const { error } = await supabase
+        .from('familias')
+        .update({
+          tasa_usd: Number(tasaUsd) || 60.00
+        })
+        .eq('id', familiaId);
+
+      if (error) {
+        alert('Error al actualizar tasas: ' + error.message);
+      } else {
+        alert('¡Tasas de cambio guardadas con éxito!');
+        await onPerfilActualizado();
+      }
+    } catch (err: any) {
+      alert('Error inesperado: ' + err.message);
+    } finally {
+      setGuardandoTasas(false);
     }
   };
 
@@ -200,7 +231,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       return;
     }
 
-    setGuardando(true);
     try {
       const { data: famTarget, error: errFam } = await supabase
         .from('familias')
@@ -210,7 +240,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
       if (errFam || !famTarget) {
         alert('Código de familia no encontrado. Verifique e intente nuevamente.');
-        setGuardando(false);
         return;
       }
 
@@ -227,8 +256,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       window.location.reload();
     } catch (err: any) {
       alert('Error al unirse: ' + err.message);
-    } finally {
-      setGuardando(false);
     }
   };
 
@@ -326,7 +353,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </button>
       </form>
 
-      {/* Bloque 2: Cambiar Contraseña con Verificación de Clave Actual */}
+      {/* Bloque 2: Cambiar Contraseña */}
       <form onSubmit={handleCambiarPassword} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <KeyRound size={14} color="#00ff41" /> Seguridades y Contraseña
@@ -383,7 +410,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </button>
       </form>
 
-      {/* Bloque 3: Formulario de Grupo Familiar y Tasas */}
+      {/* Bloque 3: Formulario EXCLUSIVO de Grupo Familiar */}
       <form onSubmit={handleGuardarFamilia} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Users size={14} color="#ffea00" /> Grupo Familiar y Compartir
@@ -403,7 +430,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           />
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
+        <div style={{ marginBottom: '14px' }}>
           <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
             Código de Invitación (Personalizado)
           </label>
@@ -451,11 +478,25 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           </span>
         </div>
 
-        {/* Panel de Tasas de Cambio Automáticas / Editables */}
-        <div style={{ background: bgInput, border: `1px solid ${borderCard}`, padding: '12px', borderRadius: '10px', marginBottom: '16px' }}>
+        <button
+          type="submit"
+          disabled={guardandoFamilia}
+          style={{ width: '100%', background: '#ffea00', color: '#0a0e14', padding: '10px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
+        >
+          {guardandoFamilia ? 'Guardando Grupo...' : 'Guardar Grupo Familiar'}
+        </button>
+      </form>
+
+      {/* Bloque 4: Formulario EXCLUSIVO de Tasas de Cambio */}
+      <form onSubmit={handleGuardarTasas} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
+        <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <DollarSign size={14} color="#00e5ff" /> Tasas de Cambio Oficiales (Relación a RD$)
+        </div>
+
+        <div style={{ background: bgInput, border: `1px solid ${borderCard}`, padding: '12px', borderRadius: '10px', marginBottom: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ fontSize: '11px', fontWeight: '800', color: textTitle }}>
-              💱 Tasas de Cambio Oficiales (Relación a RD$)
+              💱 Mercado Financiero
             </span>
             <button
               type="button"
@@ -484,25 +525,14 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
         <button
           type="submit"
-          disabled={guardando}
-          style={{
-            width: '100%',
-            background: esOscuro ? '#00e5ff' : '#0284c7',
-            color: esOscuro ? '#0a0e14' : '#fff',
-            padding: '11px',
-            border: 'none',
-            borderRadius: '8px',
-            fontWeight: '800',
-            fontSize: '11px',
-            textTransform: 'uppercase',
-            cursor: 'pointer'
-          }}
+          disabled={guardandoTasas}
+          style={{ width: '100%', background: esOscuro ? '#00e5ff' : '#0284c7', color: esOscuro ? '#0a0e14' : '#fff', padding: '10px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
         >
-          {guardando ? 'Guardando Cambios...' : 'Guardar Datos y Tasas'}
+          {guardandoTasas ? 'Guardando Tasas...' : 'Guardar Tasas de Cambio'}
         </button>
       </form>
 
-      {/* Bloque 4: Unirse a Otra Familia Existente */}
+      {/* Bloque 5: Unirse a Otra Familia Existente */}
       <div style={{ borderBottom: `1px solid ${borderCard}`, paddingBottom: '16px' }}>
         <div style={{ fontSize: '11px', fontWeight: '800', color: '#ffea00', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
           <Key size={14} /> ¿Quieres unirte a otro grupo familiar existente?
@@ -517,7 +547,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           />
           <button
             type="submit"
-            disabled={guardando}
             style={{ background: '#ffea00', color: '#0a0e14', padding: '0 14px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '10px', textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
             Vincular Familia
