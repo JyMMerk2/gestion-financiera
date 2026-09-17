@@ -43,7 +43,8 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'metas', nombre: 'Metas', icon: Target },
   ];
 
-  const bgColor = modoOscuro ? '#111827' : '#ffffff';
+  // Paleta Dark Neón / Cyberpunk
+  const bgColor = modoOscuro ? '#0a0e14' : '#ffffff';
   const borderColor = modoOscuro ? '#1f2937' : '#e2e8f0';
 
   const navegar = (id: string) => {
@@ -58,7 +59,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.03)'
+      boxShadow: modoOscuro ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 6px -1px rgba(0, 0, 0, 0.03)'
     }}>
       <div style={{
         maxWidth: '1280px',
@@ -79,8 +80,8 @@ export const Navigation: React.FC<NavigationProps> = ({
             style={{ 
               fontSize: '14px', 
               fontWeight: '900', 
-              letterSpacing: '-0.02em', 
-              color: modoOscuro ? '#38bdf8' : '#0f172a',
+              letterSpacing: '0.05em', 
+              color: modoOscuro ? '#00e5ff' : '#0f172a',
               textTransform: 'uppercase',
               cursor: 'pointer'
             }}
@@ -95,11 +96,11 @@ export const Navigation: React.FC<NavigationProps> = ({
               const activo = vistaActual === item.id;
               
               const itemBg = activo 
-                ? (modoOscuro ? '#1e293b' : '#0f172a') 
+                ? (modoOscuro ? 'rgba(0, 229, 255, 0.12)' : '#0f172a') 
                 : 'transparent';
               
               const itemColor = activo 
-                ? '#ffffff' 
+                ? (modoOscuro ? '#00e5ff' : '#ffffff') 
                 : (modoOscuro ? '#94a3b8' : '#64748b');
 
               return (
@@ -112,7 +113,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     gap: '6px',
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    border: 'none',
+                    border: activo && modoOscuro ? '1px solid #00e5ff44' : 'none',
                     background: itemBg,
                     color: itemColor,
                     fontSize: '12px',
@@ -146,7 +147,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               borderRadius: '8px',
               border: `1px solid ${borderColor}`,
               background: 'transparent',
-              color: modoOscuro ? '#f59e0b' : '#64748b',
+              color: modoOscuro ? '#ffea00' : '#64748b',
               cursor: 'pointer',
               outline: 'none'
             }}
@@ -165,13 +166,13 @@ export const Navigation: React.FC<NavigationProps> = ({
               height: '36px',
               borderRadius: '8px',
               border: vistaActual === 'configuracion' 
-                ? 'none' 
+                ? '1px solid #00e5ff' 
                 : `1px solid ${borderColor}`,
               background: vistaActual === 'configuracion' 
-                ? (modoOscuro ? '#38bdf8' : '#0f172a') 
+                ? 'rgba(0, 229, 255, 0.15)' 
                 : 'transparent',
               color: vistaActual === 'configuracion' 
-                ? '#ffffff' 
+                ? '#00e5ff' 
                 : (modoOscuro ? '#94a3b8' : '#64748b'),
               cursor: 'pointer',
               outline: 'none'
@@ -195,8 +196,8 @@ export const Navigation: React.FC<NavigationProps> = ({
               padding: '8px 10px',
               borderRadius: '8px',
               border: 'none',
-              background: modoOscuro ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2',
-              color: '#ef4444',
+              background: modoOscuro ? 'rgba(255, 0, 127, 0.15)' : '#fef2f2',
+              color: '#ff007f',
               fontSize: '12px',
               fontWeight: '700',
               cursor: 'pointer',
@@ -227,7 +228,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         </div>
 
-        {/* MENÚ MÓVIL DESPLEGABLE (APARECE AL TOCAR EL BOTÓN EN CELULARES) */}
+        {/* MENÚ MÓVIL DESPLEGABLE */}
         {menuAbierto && (
           <div style={{
             width: '100%',
@@ -252,8 +253,8 @@ export const Navigation: React.FC<NavigationProps> = ({
                     padding: '10px 14px',
                     borderRadius: '8px',
                     border: 'none',
-                    background: activo ? (modoOscuro ? '#1e293b' : '#0f172a') : 'transparent',
-                    color: activo ? '#ffffff' : (modoOscuro ? '#94a3b8' : '#64748b'),
+                    background: activo ? (modoOscuro ? 'rgba(0, 229, 255, 0.15)' : '#0f172a') : 'transparent',
+                    color: activo ? (modoOscuro ? '#00e5ff' : '#ffffff') : (modoOscuro ? '#94a3b8' : '#64748b'),
                     fontSize: '13px',
                     fontWeight: '700',
                     textAlign: 'left',
