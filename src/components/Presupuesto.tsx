@@ -3,6 +3,7 @@ import { supabase } from '../services/supabase';
 import { TransaccionPresupuesto, TipoTransaccion } from '../types';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { WalletsManager } from './WalletsManager';
+import { ChevronLeft, ChevronRight, Calendar, Trash2 } from 'lucide-react';
 
 interface PresupuestoProps {
   familiaId: string;
@@ -15,8 +16,15 @@ interface WalletItem {
   moneda: string;
 }
 
-export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccionado }) => {
+export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccionado: mesProp }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
+
+  // Estado local para permitir la navegación dinámica entre meses
+  const [mesActual, setMesActual] = useState(mesProp);
+
+  useEffect(() => {
+    if (mesProp) setMesActual(mesProp);
+  }, [mesProp]);
 
   const [tipo, setTipo] = useState<TipoTransaccion>('Gasto');
   const [categoria, setCategoria] = useState('');
@@ -29,6 +37,21 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
   const [walletsDinamicas, setWalletsDinamicas] = useState<WalletItem[]>([]);
   const [cargando, setCargando] = useState(false);
 
+  const cambiarMes = (delta: number) => {
+    const [year, month] = mesActual.split('-').map(Number);
+    const date = new Date(year, month - 1 + delta, 1);
+    const newYear = date.getFullYear();
+    const newMonth = String(date.getMonth() + 1).padStart(2, '0');
+    setMesActual(`${newYear}-${newMonth}`);
+  };
+
+  const obtenerNombreMes = (mesStr: string) => {
+    if (!mesStr) return '';
+    const [year, month] = mesStr.split('-');
+    const nombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return `${nombres[parseInt(month, 10) - 1]} ${year}`;
+  };
+
   const cargarWallets = async () => {
     if (!familiaId) return;
     const { data } = await supabase
@@ -39,7 +62,6 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
 
     if (data && data.length > 0) {
       setWalletsDinamicas(data);
-      // Asigna por defecto la primera wallet encontrada si la actual no está en la lista
       setWallet(prev => (data.some(w => w.nombre === prev) ? prev : data[0].nombre));
     } else {
       setWalletsDinamicas([]);
@@ -55,14 +77,14 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
       .order('fecha', { ascending: false });
 
     if (data) {
-      setTransacciones(data.filter((row: TransaccionPresupuesto) => row.fecha.startsWith(mesSeleccionado)));
+      setTransacciones(data.filter((row: TransaccionPresupuesto) => row.fecha.startsWith(mesActual)));
     }
   };
 
   useEffect(() => {
     cargarTransacciones();
     cargarWallets();
-  }, [familiaId, mesSeleccionado]);
+  }, [familiaId, mesActual]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +123,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '14px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
       
       {/* Columna Izquierda: Formulario + Administrador de Wallets */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -113,7 +135,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Tipo</label>
                 <select value={tipo} onChange={e => setTipo(e.target.value as TipoTransaccion)} style={inputStyle}>
@@ -127,7 +149,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Monto (RD$)</label>
                 <input type="number" step="0.01" required value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" style={inputStyle} />
@@ -152,7 +174,7 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '9px', fontWeight: '800', color: textLabel, marginBottom: '3px' }}>Fecha</label>
                 <input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
@@ -174,40 +196,62 @@ export const Presupuesto: React.FC<PresupuestoProps> = ({ familiaId, mesSeleccio
 
       </div>
 
-      {/* Columna Derecha: Historial */}
+      {/* Columna Derecha: Historial con Selector de Mes */}
       <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary, transition: 'all 0.3s' }}>
-        <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
-          📜 Historial Presupuesto
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
+            📜 Historial Presupuesto
+          </span>
+
+          {/* Selector de Mes Navegable */}
+          <div style={{ display: 'flex', alignItems: 'center', background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '20px', padding: '3px 10px', gap: '8px' }}>
+            <button onClick={() => cambiarMes(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textPrimary, display: 'flex', alignItems: 'center' }}>
+              <ChevronLeft size={14} />
+            </button>
+            <span style={{ fontSize: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Calendar size={12} color="#38bdf8" /> {obtenerNombreMes(mesActual)}
+            </span>
+            <button onClick={() => cambiarMes(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textPrimary, display: 'flex', alignItems: 'center' }}>
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
+
         <div style={{ maxHeight: '520px', overflowY: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-            <thead>
-              <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
-                <th style={{ padding: '8px' }}>Fecha</th>
-                <th style={{ padding: '8px' }}>Wallet</th>
-                <th style={{ padding: '8px' }}>Tipo / Cat</th>
-                <th style={{ padding: '8px' }}>Total RD$</th>
-                <th style={{ padding: '8px' }}>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transacciones.map((row) => (
-                <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
-                  <td style={{ padding: '8px', color: textLabel }}>{row.fecha}</td>
-                  <td style={{ padding: '8px' }}><b>{row.wallet}</b></td>
-                  <td style={{ padding: '8px' }}>{row.tipo} / {row.categoria}</td>
-                  <td style={{ padding: '8px', color: row.tipo === 'Ingreso' ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
-                    RD$ {Number(row.monto_dop).toFixed(2)}
-                  </td>
-                  <td style={{ padding: '8px' }}>
-                    <button onClick={() => eliminarRegistro(row.id!)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>
-                      🗑️
-                    </button>
-                  </td>
+          {transacciones.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: textLabel, fontSize: '11px' }}>
+              Sin transacciones en {obtenerNombreMes(mesActual)}.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
+                  <th style={{ padding: '8px' }}>Fecha</th>
+                  <th style={{ padding: '8px' }}>Wallet</th>
+                  <th style={{ padding: '8px' }}>Tipo / Cat</th>
+                  <th style={{ padding: '8px' }}>Total RD$</th>
+                  <th style={{ padding: '8px' }}>Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {transacciones.map((row) => (
+                  <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
+                    <td style={{ padding: '8px', color: textLabel }}>{row.fecha}</td>
+                    <td style={{ padding: '8px' }}><b>{row.wallet}</b></td>
+                    <td style={{ padding: '8px' }}>{row.tipo} / {row.categoria}</td>
+                    <td style={{ padding: '8px', color: row.tipo === 'Ingreso' ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                      {row.tipo === 'Ingreso' ? '+' : '-'} RD$ {Number(row.monto_dop).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      <button onClick={() => eliminarRegistro(row.id!)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
