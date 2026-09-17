@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
 import { WalletsManager } from './WalletsManager';
-import { Trash2, PieChart, Landmark } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 interface PatrimonioProps {
   familiaId: string;
@@ -69,6 +69,7 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
       const valorNum = Number(valor) || 0;
       const fechaVal = fecha || new Date().toISOString().split('T')[0];
 
+      // Incluye 'nombre' y 'nombre_bien' para garantizar el insert en Supabase
       const payload = {
         familia_id: familiaId,
         nombre: nombreBien.trim(),
@@ -108,29 +109,14 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
 
   const totalPatrimonio = activos.reduce((acc, curr) => acc + Number(curr.valor_dop || curr.valor || 0), 0);
 
-  // Agrupar los activos por categoría/tipo para generar la gráfica
-  const distribucionCategorias = activos.reduce((acc: Record<string, number>, curr) => {
-    const cat = curr.tipo_bien || curr.tipo || 'Otros Activos';
-    const val = Number(curr.valor_dop || curr.valor || 0);
-    acc[cat] = (acc[cat] || 0) + val;
-    return acc;
-  }, {});
-
-  const coloresCategorias: Record<string, string> = {
-    'Acciones / Inversiones': '#8b5cf6',
-    'Inmueble / Terreno': '#38bdf8',
-    'Vehículo': '#f59e0b',
-    'Otros Activos': '#10b981'
-  };
-
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
       
-      {/* Formulario + Cuentas */}
+      {/* Formulario + Administrador de Cuentas */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
-          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Landmark size={14} color="#8b5cf6" /> Registrar Activo / Bien / Acciones
+          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle }}>
+            💎 Registrar Activo / Bien / Acciones
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -182,91 +168,53 @@ export const Patrimonio: React.FC<PatrimonioProps> = ({ familiaId }) => {
         <WalletsManager familiaId={familiaId} onWalletCambio={cargarWallets} />
       </div>
 
-      {/* Gráfica de Distribución + Historial */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        
-        {/* Gráfica de Patrimonio por Categoría */}
-        <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
-          <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <PieChart size={14} color="#38bdf8" /> Distribución del Patrimonio por Categoria
-          </div>
+      {/* Historial */}
+      <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
+            🏛️ Historial de Patrimonio
+          </span>
+          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8b5cf6' }}>
+            Total: RD$ {totalPatrimonio.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
 
-          {totalPatrimonio === 0 ? (
-            <div style={{ fontSize: '10px', color: textLabel, textAlign: 'center', padding: '10px' }}>
-              Sin datos para generar la gráfica.
+        <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
+          {activos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: textLabel, fontSize: '11px' }}>
+              No tienes bienes registrados en el patrimonio.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {Object.keys(distribucionCategorias).map(cat => {
-                const montoCat = distribucionCategorias[cat];
-                const pct = ((montoCat / totalPatrimonio) * 100).toFixed(1);
-                const colorCat = coloresCategorias[cat] || '#8b5cf6';
-
-                return (
-                  <div key={cat}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold', marginBottom: '3px' }}>
-                      <span>{cat} ({pct}%)</span>
-                      <span style={{ color: colorCat }}>RD$ {montoCat.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div style={{ width: '100%', background: bgInput, height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, background: colorCat, height: '100%', borderRadius: '4px', transition: 'width 0.4s ease' }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
+                  <th style={{ padding: '8px' }}>Fecha</th>
+                  <th style={{ padding: '8px' }}>Bien / Inversión</th>
+                  <th style={{ padding: '8px' }}>Wallet / Entidad</th>
+                  <th style={{ padding: '8px' }}>Valor RD$</th>
+                  <th style={{ padding: '8px' }}>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activos.map((row) => (
+                  <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
+                    <td style={{ padding: '8px', color: textLabel }}>{row.fecha || row.fecha_registro}</td>
+                    <td style={{ padding: '8px' }}><b>{row.nombre || row.nombre_bien}</b> <br/><small style={{ color: textLabel }}>{row.tipo_bien}</small></td>
+                    <td style={{ padding: '8px' }}><b>{row.wallet || 'Efectivo'}</b></td>
+                    <td style={{ padding: '8px', color: '#8b5cf6', fontWeight: 'bold' }}>
+                      RD$ {Number(row.valor_dop || row.valor || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      <button onClick={() => eliminarActivo(row.id!)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
-
-        {/* Historial */}
-        <div style={{ background: bgCard, border: `1px solid ${borderCard}`, borderRadius: '14px', padding: '16px', color: textPrimary }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: `1px solid ${borderCard}`, paddingBottom: '6px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: textTitle }}>
-              🏛️ Historial de Patrimonio
-            </span>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8b5cf6' }}>
-              Total: RD$ {totalPatrimonio.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-
-          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {activos.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '20px', color: textLabel, fontSize: '11px' }}>
-                No tienes bienes registrados en el patrimonio.
-              </div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                <thead>
-                  <tr style={{ background: bgInput, textTransform: 'uppercase', borderBottom: `1px solid ${borderCard}`, textAlign: 'left', color: textLabel }}>
-                    <th style={{ padding: '8px' }}>Fecha</th>
-                    <th style={{ padding: '8px' }}>Bien / Inversión</th>
-                    <th style={{ padding: '8px' }}>Wallet / Entidad</th>
-                    <th style={{ padding: '8px' }}>Valor RD$</th>
-                    <th style={{ padding: '8px' }}>Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activos.map((row) => (
-                    <tr key={row.id} style={{ borderBottom: `1px solid ${borderCard}` }}>
-                      <td style={{ padding: '8px', color: textLabel }}>{row.fecha || row.fecha_registro}</td>
-                      <td style={{ padding: '8px' }}><b>{row.nombre || row.nombre_bien}</b> <br/><small style={{ color: textLabel }}>{row.tipo_bien}</small></td>
-                      <td style={{ padding: '8px' }}><b>{row.wallet || 'Efectivo'}</b></td>
-                      <td style={{ padding: '8px', color: '#8b5cf6', fontWeight: 'bold' }}>
-                        RD$ {Number(row.valor_dop || row.valor || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '8px' }}>
-                        <button onClick={() => eliminarActivo(row.id!)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-
       </div>
 
     </div>
