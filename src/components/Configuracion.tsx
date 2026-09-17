@@ -13,7 +13,6 @@ interface ConfiguracionProps {
 export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilActualizado, moneda = 'RD$', setMoneda }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
 
-  // Versión de la Aplicación
   const APP_VERSION = 'v2.5.0';
 
   // Estados de Usuario / Perfil
@@ -32,7 +31,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   const [codigoUnirse, setCodigoUnirse] = useState('');
   const [guardandoFamilia, setGuardandoFamilia] = useState(false);
 
-  // Datos de Familia Activa
+  // Datos Vista Previa Familia
   const [familiaActualNombre, setFamiliaActualNombre] = useState('Sin Grupo Familiar');
   const [familiaActualCodigo, setFamiliaActualCodigo] = useState('N/A');
 
@@ -61,7 +60,6 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   }, [perfil]);
 
-  // Consulta tasas financieras en vivo desde API pública
   const consultarTasasEnVivo = async () => {
     setEstadoTasa('Consultando mercado...');
     try {
@@ -98,19 +96,14 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     try {
       const { error } = await supabase
         .from('perfiles')
-        .update({
-          nombre_usuario: nombreUsuario.trim()
-        })
+        .update({ nombre_usuario: nombreUsuario.trim() })
         .eq('id', perfil.id);
 
-      if (error) {
-        alert('Error al actualizar nombre: ' + error.message);
-      } else {
-        alert('¡Nombre de usuario actualizado con éxito!');
-        onPerfilActualizado();
-      }
+      if (error) throw error;
+      alert('¡Nombre de usuario actualizado con éxito!');
+      onPerfilActualizado();
     } catch (err: any) {
-      alert('Error inesperado: ' + err.message);
+      alert('Error al actualizar nombre: ' + err.message);
     } finally {
       setGuardandoUsuario(false);
     }
@@ -118,17 +111,14 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
   const handleCambiarPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!passwordActual) {
       alert('Debes ingresar tu contraseña actual.');
       return;
     }
-
     if (nuevaPassword.length < 6) {
       alert('La contraseña nueva debe tener un mínimo de 6 caracteres.');
       return;
     }
-
     if (nuevaPassword !== confirmarPassword) {
       alert('Las contraseñas no coinciden.');
       return;
@@ -137,7 +127,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     setGuardandoPassword(true);
     try {
       const userEmail = perfil?.email;
-      if (!userEmail) throw new Error('No se pudo verificar el correo electrónico del usuario.');
+      if (!userEmail) throw new Error('No se pudo verificar el correo del usuario.');
 
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: userEmail,
@@ -154,14 +144,12 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         password: nuevaPassword
       });
 
-      if (updateError) {
-        alert('Error al cambiar contraseña: ' + updateError.message);
-      } else {
-        alert('¡Contraseña actualizada correctamente!');
-        setPasswordActual('');
-        setNuevaPassword('');
-        setConfirmarPassword('');
-      }
+      if (updateError) throw updateError;
+
+      alert('¡Contraseña actualizada correctamente!');
+      setPasswordActual('');
+      setNuevaPassword('');
+      setConfirmarPassword('');
     } catch (err: any) {
       alert('Error inesperado: ' + err.message);
     } finally {
@@ -169,73 +157,56 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     }
   };
 
-  // Guardado de la Familia con trazabilidad en consola
+  // Creación y Vinculación Automática Infalible desde la App
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!perfil?.id) return;
     setGuardandoFamilia(true);
 
     try {
+      const nomFinal = nombreFamilia.trim() || 'FAMILIA MERCADO GARCIA';
+      const codFinal = codigoInvitacion.trim().toUpperCase() || 'JYMMERK2-2026';
       let familiaId = perfil?.familia_id || perfil?.familias?.id;
-      const nomFinal = nombreFamilia.trim() || 'Mi Grupo Familiar';
-      const codFinal = codigoInvitacion.trim().toUpperCase() || 'FAMILIA-2026';
-
-      console.log('Iniciando guardado de familia...', { familiaId, nomFinal, codFinal });
 
       if (!familiaId) {
-        // 1. Verificar si existe esa familia registrada
-        const { data: famExistente } = await supabase
+        // 1. Crear la familia utilizando un ID garantizado si no existe aún
+        const { data: famNueva, error: errCrear } = await supabase
           .from('familias')
+          .insert([{
+            nombre: nomFinal,
+            codigo_invitacion: codFinal,
+            tasa_usd: Number(tasaUsd) || 60.00
+          }])
           .select('id')
-          .eq('codigo_invitacion', codFinal)
           .maybeSingle();
 
-        if (famExistente) {
-          familiaId = famExistente.id;
+        if (famNueva?.id) {
+          familiaId = famNueva.id;
         } else {
-          // 2. Insertar familia
-          const { error: errInsert } = await supabase
-            .from('familias')
-            .insert([{
-              nombre: nomFinal,
-              codigo_invitacion: codFinal,
-              tasa_usd: Number(tasaUsd) || 60.00
-            }]);
-
-          if (errInsert) {
-            console.error('Error insertando en familias:', errInsert);
-            throw errInsert;
-          }
-
-          // 3. Consultar ID recién creado
-          const { data: nuevaFam, error: errFetch } = await supabase
+          // Si Supabase no devuelve la fila por RLS, se busca por el código único creado
+          const { data: famBuscada } = await supabase
             .from('familias')
             .select('id')
             .eq('codigo_invitacion', codFinal)
             .single();
 
-          if (errFetch || !nuevaFam) {
-            console.error('Error consultando familia creada:', errFetch);
-            throw new Error('No se pudo verificar el registro de la familia.');
-          }
-
-          familiaId = nuevaFam.id;
+          if (famBuscada) familiaId = famBuscada.id;
         }
 
-        console.log('Vinculando familia_id a perfiles:', familiaId);
+        if (!familiaId) {
+          throw new Error('No se pudo obtener el ID del nuevo grupo familiar. Verifique los permisos RLS en Supabase.');
+        }
 
-        // 4. Vincular en la tabla perfiles
+        // 2. Vincular familia_id al perfil del usuario actual
         const { error: errPerfil } = await supabase
           .from('perfiles')
           .update({ familia_id: familiaId })
           .eq('id', perfil.id);
 
-        if (errPerfil) {
-          console.error('Error vinculando perfil:', errPerfil);
-          throw errPerfil;
-        }
+        if (errPerfil) throw errPerfil;
 
       } else {
-        // 5. Actualizar la familia existente
+        // 3. Actualización de datos de la familia existente
         const { error: errUpdate } = await supabase
           .from('familias')
           .update({
@@ -244,29 +215,26 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
           })
           .eq('id', familiaId);
 
-        if (errUpdate) {
-          console.error('Error actualizando familias:', errUpdate);
-          throw errUpdate;
-        }
+        if (errUpdate) throw errUpdate;
       }
 
-      alert('¡Grupo familiar guardado y vinculado correctamente!');
+      alert('¡Grupo familiar creado y vinculado a tu perfil exitosamente!');
+      setFamiliaActualNombre(nomFinal);
+      setFamiliaActualCodigo(codFinal);
       await onPerfilActualizado();
       window.location.reload();
     } catch (err: any) {
-      console.error('Error general handleGuardarFamilia:', err);
-      alert('Error al guardar el grupo familiar: ' + err.message);
+      alert('Error al guardar grupo familiar: ' + err.message);
     } finally {
       setGuardandoFamilia(false);
     }
   };
 
-  // Guardado independiente de las Tasas
   const handleGuardarTasas = async (e: React.FormEvent) => {
     e.preventDefault();
     const familiaId = perfil?.familia_id || perfil?.familias?.id;
     if (!familiaId) {
-      alert('Primero debes guardar el Grupo Familiar para asignar las tasas.');
+      alert('Primero debes guardar el Grupo Familiar.');
       return;
     }
 
@@ -274,19 +242,15 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     try {
       const { error } = await supabase
         .from('familias')
-        .update({
-          tasa_usd: Number(tasaUsd) || 60.00
-        })
+        .update({ tasa_usd: Number(tasaUsd) || 60.00 })
         .eq('id', familiaId);
 
-      if (error) {
-        alert('Error al actualizar tasas: ' + error.message);
-      } else {
-        alert('¡Tasas de cambio guardadas con éxito!');
-        await onPerfilActualizado();
-      }
+      if (error) throw error;
+
+      alert('¡Tasas de cambio guardadas con éxito!');
+      await onPerfilActualizado();
     } catch (err: any) {
-      alert('Error inesperado: ' + err.message);
+      alert('Error al guardar tasas: ' + err.message);
     } finally {
       setGuardandoTasas(false);
     }
@@ -340,10 +304,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: 'Unirse a Familia',
-          text: textoCompartir,
-        });
+        await navigator.share({ title: 'Unirse a Familia', text: textoCompartir });
       } catch (err) {
         copiarCodigo();
       }
@@ -381,42 +342,23 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </div>
       )}
 
-      {/* Bloque 1: Datos de Perfil y Nombre */}
+      {/* Bloque 1: Datos de Perfil */}
       <form onSubmit={handleGuardarUsuario} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <User size={14} color="#00e5ff" /> Mi Usuario
         </div>
 
         <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
-            Nombre de Usuario
-          </label>
-          <input
-            type="text"
-            required
-            value={nombreUsuario}
-            onChange={(e) => setNombreUsuario(e.target.value)}
-            style={inputStyle}
-          />
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>Nombre de Usuario</label>
+          <input type="text" required value={nombreUsuario} onChange={(e) => setNombreUsuario(e.target.value)} style={inputStyle} />
         </div>
 
         <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
-            Correo Electrónico
-          </label>
-          <input
-            type="email"
-            disabled
-            value={perfil?.email || ''}
-            style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }}
-          />
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>Correo Electrónico</label>
+          <input type="email" disabled value={perfil?.email || ''} style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
         </div>
 
-        <button
-          type="submit"
-          disabled={guardandoUsuario}
-          style={{ width: '100%', background: esOscuro ? '#00e5ff' : '#0284c7', color: esOscuro ? '#0a0e14' : '#fff', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
-        >
+        <button type="submit" disabled={guardandoUsuario} style={{ width: '100%', background: esOscuro ? '#00e5ff' : '#0284c7', color: esOscuro ? '#0a0e14' : '#fff', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}>
           {guardandoUsuario ? 'Guardando...' : 'Actualizar Nombre'}
         </button>
       </form>
@@ -428,63 +370,31 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </div>
 
         <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
-            Contraseña Actual
-          </label>
-          <input
-            type="password"
-            required
-            value={passwordActual}
-            onChange={(e) => setPasswordActual(e.target.value)}
-            placeholder="Ingrese su contraseña actual"
-            style={inputStyle}
-          />
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>Contraseña Actual</label>
+          <input type="password" required value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} placeholder="Ingrese su contraseña actual" style={inputStyle} />
         </div>
 
         <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
-            Nueva Contraseña
-          </label>
-          <input
-            type="password"
-            required
-            value={nuevaPassword}
-            onChange={(e) => setNuevaPassword(e.target.value)}
-            placeholder="Mínimo 6 caracteres"
-            style={inputStyle}
-          />
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>Nueva Contraseña</label>
+          <input type="password" required value={nuevaPassword} onChange={(e) => setNuevaPassword(e.target.value)} placeholder="Mínimo 6 caracteres" style={inputStyle} />
         </div>
 
         <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
-            Confirmar Nueva Contraseña
-          </label>
-          <input
-            type="password"
-            required
-            value={confirmarPassword}
-            onChange={(e) => setConfirmarPassword(e.target.value)}
-            placeholder="Repita la nueva contraseña"
-            style={inputStyle}
-          />
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>Confirmar Nueva Contraseña</label>
+          <input type="password" required value={confirmarPassword} onChange={(e) => setConfirmarPassword(e.target.value)} placeholder="Repita la nueva contraseña" style={inputStyle} />
         </div>
 
-        <button
-          type="submit"
-          disabled={guardandoPassword}
-          style={{ width: '100%', background: '#00ff41', color: '#0a0e14', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
-        >
+        <button type="submit" disabled={guardandoPassword} style={{ width: '100%', background: '#00ff41', color: '#0a0e14', padding: '9px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}>
           {guardandoPassword ? 'Verificando y Cambiando...' : 'Guardar Nueva Contraseña'}
         </button>
       </form>
 
-      {/* Bloque 3: Formulario EXCLUSIVO de Grupo Familiar */}
+      {/* Bloque 3: Grupo Familiar */}
       <form onSubmit={handleGuardarFamilia} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Users size={14} color="#ffea00" /> Grupo Familiar y Compartir
         </div>
 
-        {/* Panel Informativo del Estado Actual de la Familia */}
         <div style={{ background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '10px', padding: '12px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ fontSize: '10px', fontWeight: 'bold', color: textLabel, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <ShieldCheck size={13} color="#00ff41" /> Estado Actual del Grupo
@@ -500,77 +410,32 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         </div>
 
         <div style={{ marginBottom: '14px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
-            Nombre del Grupo Familiar
-          </label>
-          <input
-            type="text"
-            required
-            value={nombreFamilia}
-            onChange={(e) => setNombreFamilia(e.target.value)}
-            placeholder="Ej. FAMILIA MERCADO GARCIA"
-            style={inputStyle}
-          />
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>Nombre del Grupo Familiar</label>
+          <input type="text" required value={nombreFamilia} onChange={(e) => setNombreFamilia(e.target.value)} placeholder="Ej. FAMILIA MERCADO GARCIA" style={inputStyle} />
         </div>
 
         <div style={{ marginBottom: '14px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>
-            Código de Invitación (Personalizado)
-          </label>
-          
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: textLabel, marginBottom: '4px' }}>Código de Invitación (Personalizado)</label>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <input
-              type="text"
-              required
-              value={codigoInvitacion}
-              onChange={(e) => setCodigoInvitacion(e.target.value)}
-              placeholder="Ej. JYMMERK2-2026"
-              style={{ ...inputStyle, flex: 1, fontWeight: 'bold', letterSpacing: '0.5px' }}
-            />
-
-            <button
-              type="button"
-              onClick={copiarCodigo}
-              title="Copiar Código"
-              style={{ background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '8px', padding: '0 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: textPrimary }}
-            >
+            <input type="text" required value={codigoInvitacion} onChange={(e) => setCodigoInvitacion(e.target.value)} placeholder="Ej. JYMMERK2-2026" style={{ ...inputStyle, flex: 1, fontWeight: 'bold', letterSpacing: '0.5px' }} />
+            <button type="button" onClick={copiarCodigo} style={{ background: bgInput, border: `1px solid ${borderCard}`, borderRadius: '8px', padding: '0 12px', cursor: 'pointer', color: textPrimary }}>
               {copiado ? <Check size={16} color="#00ff41" /> : <Copy size={16} />}
             </button>
-
-            <button
-              type="button"
-              onClick={compartirCodigo}
-              title="Compartir Código"
-              style={{ background: esOscuro ? '#00e5ff' : '#0284c7', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: esOscuro ? '#0a0e14' : '#fff' }}
-            >
+            <button type="button" onClick={compartirCodigo} style={{ background: esOscuro ? '#00e5ff' : '#0284c7', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer', color: esOscuro ? '#0a0e14' : '#fff' }}>
               <Share2 size={16} />
             </button>
-
-            <button
-              type="button"
-              onClick={compartirApp}
-              title="Compartir enlace de la App"
-              style={{ background: 'rgba(255, 0, 127, 0.15)', border: '1px solid #ff007f', color: '#ff007f', borderRadius: '8px', padding: '0 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}
-            >
+            <button type="button" onClick={compartirApp} style={{ background: 'rgba(255, 0, 127, 0.15)', border: '1px solid #ff007f', color: '#ff007f', borderRadius: '8px', padding: '0 10px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
               {copiadoApp ? <Check size={14} color="#00ff41" /> : 'App'}
             </button>
           </div>
-
-          <span style={{ fontSize: '10px', color: textLabel, marginTop: '6px', display: 'block' }}>
-            Comparte este código para permitir que otros integrantes se unan a tu grupo familiar.
-          </span>
         </div>
 
-        <button
-          type="submit"
-          disabled={guardandoFamilia}
-          style={{ width: '100%', background: '#ffea00', color: '#0a0e14', padding: '10px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
-        >
+        <button type="submit" disabled={guardandoFamilia} style={{ width: '100%', background: '#ffea00', color: '#0a0e14', padding: '10px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}>
           {guardandoFamilia ? 'Guardando Grupo...' : 'Guardar Grupo Familiar'}
         </button>
       </form>
 
-      {/* Bloque 4: Formulario EXCLUSIVO de Tasas de Cambio */}
+      {/* Bloque 4: Tasas de Cambio */}
       <form onSubmit={handleGuardarTasas} style={{ paddingBottom: '16px', borderBottom: `1px solid ${borderCard}` }}>
         <div style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px', color: textTitle, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <DollarSign size={14} color="#00e5ff" /> Tasas de Cambio Oficiales (Relación a RD$)
@@ -578,14 +443,8 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
         <div style={{ background: bgInput, border: `1px solid ${borderCard}`, padding: '12px', borderRadius: '10px', marginBottom: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: textTitle }}>
-              💱 Mercado Financiero
-            </span>
-            <button
-              type="button"
-              onClick={consultarTasasEnVivo}
-              style={{ background: 'transparent', border: 'none', color: '#00e5ff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 'bold' }}
-            >
+            <span style={{ fontSize: '11px', fontWeight: '800', color: textTitle }}>💱 Mercado Financiero</span>
+            <button type="button" onClick={consultarTasasEnVivo} style={{ background: 'transparent', border: 'none', color: '#00e5ff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 'bold' }}>
               <RefreshCw size={12} /> Actualizar
             </button>
           </div>
@@ -600,44 +459,28 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
               <input type="number" step="0.01" value={tasaEur} onChange={(e) => setTasaEur(e.target.value)} style={inputStyle} />
             </div>
           </div>
-          
-          <span style={{ fontSize: '9px', color: textLabel, display: 'block', fontStyle: 'italic' }}>
-            {estadoTasa}
-          </span>
+          <span style={{ fontSize: '9px', color: textLabel, display: 'block', fontStyle: 'italic' }}>{estadoTasa}</span>
         </div>
 
-        <button
-          type="submit"
-          disabled={guardandoTasas}
-          style={{ width: '100%', background: esOscuro ? '#00e5ff' : '#0284c7', color: esOscuro ? '#0a0e14' : '#fff', padding: '10px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
-        >
+        <button type="submit" disabled={guardandoTasas} style={{ width: '100%', background: esOscuro ? '#00e5ff' : '#0284c7', color: esOscuro ? '#0a0e14' : '#fff', padding: '10px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}>
           {guardandoTasas ? 'Guardando Tasas...' : 'Guardar Tasas de Cambio'}
         </button>
       </form>
 
-      {/* Bloque 5: Unirse a Otra Familia Existente */}
+      {/* Bloque 5: Unirse a Otra Familia */}
       <div style={{ borderBottom: `1px solid ${borderCard}`, paddingBottom: '16px' }}>
         <div style={{ fontSize: '11px', fontWeight: '800', color: '#ffea00', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
           <Key size={14} /> ¿Quieres unirte a otro grupo familiar existente?
         </div>
         <form onSubmit={handleUnirseFamilia} style={{ display: 'flex', gap: '8px' }}>
-          <input
-            type="text"
-            placeholder="Ingresa el código de invitación..."
-            value={codigoUnirse}
-            onChange={e => setCodigoUnirse(e.target.value)}
-            style={{ ...inputStyle, flex: 1 }}
-          />
-          <button
-            type="submit"
-            style={{ background: '#ffea00', color: '#0a0e14', padding: '0 14px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '10px', textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
+          <input type="text" placeholder="Ingresa el código de invitación..." value={codigoUnirse} onChange={e => setCodigoUnirse(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+          <button type="submit" style={{ background: '#ffea00', color: '#0a0e14', padding: '0 14px', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '10px', textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             Vincular Familia
           </button>
         </form>
       </div>
 
-      {/* Pie de Página con Versión del Sistema */}
+      {/* Pie de Página */}
       <div style={{ textAlign: 'center', paddingTop: '4px' }}>
         <span style={{ fontSize: '10px', fontWeight: '800', color: textLabel, letterSpacing: '0.05em' }}>
           Gestión Financiera App • <span style={{ color: '#00e5ff' }}>{APP_VERSION}</span>
