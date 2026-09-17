@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useModoOscuro } from '../hooks/useModoOscuro';
-import { Copy, Share2, Check, RefreshCw, KeyRound, User, Users, Key, DollarSign, ShieldCheck } from 'lucide-react';
+import { Copy, Share2, Check, RefreshCw, KeyRound, User, Users, Key, DollarSign, ShieldCheck, AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 
 interface ConfiguracionProps {
   perfil: any;
@@ -10,10 +10,31 @@ interface ConfiguracionProps {
   setMoneda?: (moneda: 'RD$' | 'USD') => void;
 }
 
+interface ToastNotificacion {
+  id: number;
+  tipo: 'exito' | 'error' | 'info';
+  mensaje: string;
+}
+
 export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilActualizado, moneda = 'RD$', setMoneda }) => {
   const { bgCard, borderCard, textPrimary, textLabel, inputStyle, textTitle, bgInput, esOscuro } = useModoOscuro();
 
   const APP_VERSION = 'v2.5.0';
+
+  // Sistema de Notificaciones Elegantes (Toast Cyberpunk)
+  const [toasts, setToasts] = useState<ToastNotificacion[]>([]);
+
+  const mostrarNotificacion = (tipo: 'exito' | 'error' | 'info', mensaje: string) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, tipo, mensaje }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4500);
+  };
+
+  const cerrarToast = (id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
 
   // Estados de Usuario / Perfil
   const [nombreUsuario, setNombreUsuario] = useState('');
@@ -100,10 +121,10 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         .eq('id', perfil.id);
 
       if (error) throw error;
-      alert('¡Nombre de usuario actualizado con éxito!');
+      mostrarNotificacion('exito', '¡Nombre de usuario actualizado con éxito!');
       onPerfilActualizado();
     } catch (err: any) {
-      alert('Error al actualizar nombre: ' + err.message);
+      mostrarNotificacion('error', 'Error al actualizar nombre: ' + err.message);
     } finally {
       setGuardandoUsuario(false);
     }
@@ -112,15 +133,15 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   const handleCambiarPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordActual) {
-      alert('Debes ingresar tu contraseña actual.');
+      mostrarNotificacion('info', 'Debes ingresar tu contraseña actual.');
       return;
     }
     if (nuevaPassword.length < 6) {
-      alert('La contraseña nueva debe tener un mínimo de 6 caracteres.');
+      mostrarNotificacion('info', 'La contraseña nueva debe tener un mínimo de 6 caracteres.');
       return;
     }
     if (nuevaPassword !== confirmarPassword) {
-      alert('Las contraseñas no coinciden.');
+      mostrarNotificacion('error', 'Las contraseñas nuevas no coinciden.');
       return;
     }
 
@@ -135,7 +156,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
       });
 
       if (authError) {
-        alert('La contraseña actual ingresada es incorrecta.');
+        mostrarNotificacion('error', 'La contraseña actual ingresada es incorrecta.');
         setGuardandoPassword(false);
         return;
       }
@@ -146,18 +167,18 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
       if (updateError) throw updateError;
 
-      alert('¡Contraseña actualizada correctamente!');
+      mostrarNotificacion('exito', '¡Contraseña actualizada correctamente!');
       setPasswordActual('');
       setNuevaPassword('');
       setConfirmarPassword('');
     } catch (err: any) {
-      alert('Error inesperado: ' + err.message);
+      mostrarNotificacion('error', 'Error inesperado: ' + err.message);
     } finally {
       setGuardandoPassword(false);
     }
   };
 
-  // Creación y Vinculación limpia de Familia (SIN TASA_USD)
+  // Creación y Vinculación limpia de Familia
   const handleGuardarFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!perfil?.id) return;
@@ -216,13 +237,13 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         if (errUpdate) throw errUpdate;
       }
 
-      alert('¡Grupo familiar creado y vinculado exitosamente!');
+      mostrarNotificacion('exito', '¡Grupo familiar guardado y vinculado exitosamente!');
       setFamiliaActualNombre(nomFinal);
       setFamiliaActualCodigo(codFinal);
       await onPerfilActualizado();
-      window.location.reload();
+      setTimeout(() => window.location.reload(), 1200);
     } catch (err: any) {
-      alert('Detalle al guardar grupo familiar: ' + err.message);
+      mostrarNotificacion('error', 'Detalle al guardar grupo: ' + err.message);
     } finally {
       setGuardandoFamilia(false);
     }
@@ -232,17 +253,16 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     e.preventDefault();
     const familiaId = perfil?.familia_id || perfil?.familias?.id;
     if (!familiaId) {
-      alert('Primero debes guardar el Grupo Familiar.');
+      mostrarNotificacion('info', 'Primero debes guardar el Grupo Familiar.');
       return;
     }
 
     setGuardandoTasas(true);
     try {
-      // Si usas tasas, las guardas en su tabla correspondiente o atributo separado
-      alert('¡Tasas de cambio actualizadas en la vista!');
+      mostrarNotificacion('exito', '¡Tasas de cambio actualizadas correctamente!');
       await onPerfilActualizado();
     } catch (err: any) {
-      alert('Error al guardar tasas: ' + err.message);
+      mostrarNotificacion('error', 'Error al guardar tasas: ' + err.message);
     } finally {
       setGuardandoTasas(false);
     }
@@ -251,7 +271,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   const handleUnirseFamilia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!codigoUnirse.trim()) {
-      alert('Ingresa un código de invitación válido.');
+      mostrarNotificacion('info', 'Ingresa un código de invitación válido.');
       return;
     }
 
@@ -263,7 +283,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
         .single();
 
       if (errFam || !famTarget) {
-        alert('Código de familia no encontrado. Verifique e intente nuevamente.');
+        mostrarNotificacion('error', 'Código de familia no encontrado. Verifique e intente nuevamente.');
         return;
       }
 
@@ -274,12 +294,12 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
 
       if (errPerfil) throw errPerfil;
 
-      alert(`¡Te has unido exitosamente al grupo familiar "${famTarget.nombre}"!`);
+      mostrarNotificacion('exito', `¡Te has unido exitosamente al grupo "${famTarget.nombre}"!`);
       setCodigoUnirse('');
       await onPerfilActualizado();
-      window.location.reload();
+      setTimeout(() => window.location.reload(), 1200);
     } catch (err: any) {
-      alert('Error al unirse: ' + err.message);
+      mostrarNotificacion('error', 'Error al unirse: ' + err.message);
     }
   };
 
@@ -287,6 +307,7 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
     if (!codigoInvitacion) return;
     navigator.clipboard.writeText(codigoInvitacion);
     setCopiado(true);
+    mostrarNotificacion('info', 'Código copiado al portapapeles');
     setTimeout(() => setCopiado(false), 2000);
   };
 
@@ -308,11 +329,58 @@ export const Configuracion: React.FC<ConfiguracionProps> = ({ perfil, onPerfilAc
   const compartirApp = () => {
     navigator.clipboard.writeText(window.location.origin);
     setCopiadoApp(true);
+    mostrarNotificacion('info', 'Enlace de la App copiado');
     setTimeout(() => setCopiadoApp(false), 2000);
   };
 
   return (
-    <div style={{ background: bgCard, padding: '24px', borderRadius: '16px', border: `1px solid ${borderCard}`, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ background: bgCard, padding: '24px', borderRadius: '16px', border: `1px solid ${borderCard}`, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
+      
+      {/* CORTEN DE NOTIFICACIONES TOAST CYBERPUNK */}
+      <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '360px' }}>
+        {toasts.map(t => {
+          const esExito = t.tipo === 'exito';
+          const esError = t.tipo === 'error';
+          const colorBorde = esExito ? '#00ff41' : esError ? '#ff007f' : '#00e5ff';
+          const colorBg = esExito ? 'rgba(0,255,65,0.12)' : esError ? 'rgba(255,0,127,0.12)' : 'rgba(0,229,255,0.12)';
+
+          return (
+            <div
+              key={t.id}
+              style={{
+                background: '#0a0e14',
+                border: `1px solid ${colorBorde}`,
+                borderLeft: `5px solid ${colorBorde}`,
+                boxShadow: `0 0 15px ${colorBorde}33`,
+                borderRadius: '10px',
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                color: '#fff',
+                backdropFilter: 'blur(10px)',
+                animation: 'slideIn 0.3s ease-out'
+              }}
+            >
+              {esExito && <CheckCircle2 size={18} color="#00ff41" />}
+              {esError && <AlertCircle size={18} color="#ff007f" />}
+              {!esExito && !esError && <Info size={18} color="#00e5ff" />}
+              
+              <span style={{ fontSize: '11px', fontWeight: '700', flex: 1, lineHeight: '1.4' }}>
+                {t.mensaje}
+              </span>
+
+              <button
+                onClick={() => cerrarToast(t.id)}
+                style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', padding: '2px' }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
       <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: textTitle, letterSpacing: '0.05em' }}>
         ⚙️ Configuración del Perfil y Grupo Familiar
       </h2>
